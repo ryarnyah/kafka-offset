@@ -1,0 +1,42 @@
+---
+sudo: required
+
+services:
+  - docker
+
+language: go
+sudo: true
+notifications:
+  email: true
+go:
+  - "1.10.x"
+env:
+  global:
+    - GO15VENDOREXPERIMENT=1
+install:
+  - go get github.com/golang/lint/golint
+  - go get honnef.co/go/tools/cmd/staticcheck
+script:
+  - go build -v
+  - go vet $(go list ./... | grep -v vendor)
+  - staticcheck $(go list ./... | grep -v vendor)
+  - test -z "$(golint ./... | grep -v vendor | tee /dev/stderr)"
+  - test -z "$(gofmt -s -l . | grep -v vendor | tee /dev/stderr)"
+  - go test $(go list ./... | grep -v vendor)
+  - make cover
+  - make release
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - make docker
+deploy:
+  provider: releases
+  api_key:
+    secure: "dWjRe64qxmNILYmRwBIyd8E6arhWCL3t9IgPjwumYSmU0rQ/DPKXz0neCpLyn+BoaRE/CpcYSK++JG9u03iQS7U+5+EdwT7u/dpiajUkp008MuU6gx3QsnC0u18JFTis7eDBh6aXWO+HKLOd30IOdrAcWD2f84yIDZedKKlSOVtoSvKhPDd0dQEoqgLz0kURJCWtpd30FObnJu4rc8mFarr0B36/juRLhcxiwBYsyoKlSftmY2mt7muEWFTQr+8k+oMpxNsqwvNCvvjgbVev5SQjRRQl93w2NtQMqf6JUzvyT3gw8uHbDmULU9VN8eW1h5jGvDZYJ8LYX9853V/a/W85ab1UM9Mz4W+uugu+zMLoAjRL3wD1NgPZCu8jesGb6Oxwpm7hrw3ZZa5SF4Urgvzs2IJOxLpovyrU8YIAYXBBR5sdAVdFv2Qe9PRn+YVVSvJlUDsnVwO6NImjYCXBEvmzmnfn0ibJ73zi9cbZ4Gr+sF115gMM/SI//iVk9xvtyCAYmFyzdPu3lsvnR6EdRN65iX7A8Rf6fgEDYo65tZIxM9HeaOgNWRXuZVQyjzGEtklU4y0CetUY8WgxvxXedgBOFfcAO5499pWJ2TK7OilDtRaDUGRUXEzX24Qi0FsPKoLlacMIyyZJjoncRhhrjCPdyfO8FMqU4t/uTjg7bjI="
+  file:
+    - cross/kafka-offset-linux-amd64.md5
+    - cross/kafka-offset-linux-amd64.sha256
+    - cross/kafka-offset-linux-amd64
+  skip_cleanup: true
+  script:
+    - make docker-deploy
+  on:
+    tags: true
