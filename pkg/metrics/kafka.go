@@ -20,9 +20,6 @@ import (
 type KafkaSource struct {
 	client sarama.Client
 
-	consumerGroups  []string
-	topicPartitions map[string][]int32
-
 	stopCh chan interface{}
 	mutex  sync.Mutex
 	sink   KafkaSink
@@ -66,12 +63,9 @@ func NewKafkaSource(sink KafkaSink) (*KafkaSource, error) {
 		return nil, err
 	}
 
-	topicPartitions := make(map[string][]int32)
-
 	return &KafkaSource{
-		client:          client,
-		sink:            sink,
-		topicPartitions: topicPartitions,
+		client: client,
+		sink:   sink,
 	}, nil
 }
 
@@ -107,6 +101,9 @@ func (s *KafkaSource) fetchMetrics() error {
 	s.Add(1)
 	defer s.Done()
 
+	var consumerGroups []string
+	var topicPartitions = make(map[string][]int32)
+
 	err := s.client.RefreshMetadata()
 	if err != nil {
 		return err
@@ -121,12 +118,12 @@ func (s *KafkaSource) fetchMetrics() error {
 		if err != nil {
 			return err
 		}
-		s.topicPartitions[topic] = partitions
+		topicPartitions[topic] = partitions
 	}
 	// Get all offsets
 	lastOffsets := make(map[string]map[int32]int64)
 	offsetMetrics := make([]KafkaOffsetMetric, 0)
-	for topic, partitions := range s.topicPartitions {
+	for topic, partitions := range topicPartitions {
 		for _, partition := range partitions {
 			oldestOffset, err := s.client.GetOffset(topic, partition, sarama.OffsetOldest)
 			if err != nil {
@@ -163,6 +160,7 @@ func (s *KafkaSource) fetchMetrics() error {
 	if len(brokers) < 1 {
 		return fmt.Errorf("Unable to connect to brokers %+v", brokers)
 	}
+	consumerGroupAssignedTopicPartition := make(map[string]map[string][]int32)
 	for _, broker := range brokers {
 		response, err := broker.ListGroups(&sarama.ListGroupsRequest{})
 		if err != nil {
@@ -170,37 +168,36 @@ func (s *KafkaSource) fetchMetrics() error {
 		}
 
 		for groupID := range response.Groups {
-			s.consumerGroups = append(s.consumerGroups, groupID)
+			consumerGroups = append(consumerGroups, groupID)
 		}
-	}
 
-	resp, err := brokers[rand.Intn(len(brokers))].DescribeGroups(&sarama.DescribeGroupsRequest{
-		Groups: s.consumerGroups,
-	})
-	if err != nil {
-		return err
-	}
+		resp, err := broker.DescribeGroups(&sarama.DescribeGroupsRequest{
+			Groups: consumerGroups,
+		})
+		if err != nil {
+			return err
+		}
 
-	consumerGroupAssignedTopicPartition := make(map[string]map[string][]int32)
-	for _, groupDescrition := range resp.Groups {
-		for _, member := range groupDescrition.Members {
-			assign, err := member.GetMemberAssignment()
-			if err != nil {
-				return err
+		for _, groupDescrition := range resp.Groups {
+			for _, member := range groupDescrition.Members {
+				assign, err := member.GetMemberAssignment()
+				if err != nil {
+					return err
+				}
+				topicsParition := make(map[string][]int32)
+				if consumerGroupAssignedTopicPartition[groupDescrition.GroupId] != nil {
+					topicsParition = consumerGroupAssignedTopicPartition[groupDescrition.GroupId]
+				}
+				for topic, partitions := range assign.Topics {
+					topicsParition[topic] = append(topicsParition[topic], partitions...)
+				}
+				consumerGroupAssignedTopicPartition[groupDescrition.GroupId] = topicsParition
 			}
-			topicsParition := make(map[string][]int32)
-			if consumerGroupAssignedTopicPartition[groupDescrition.GroupId] != nil {
-				topicsParition = consumerGroupAssignedTopicPartition[groupDescrition.GroupId]
-			}
-			for topic, partitions := range assign.Topics {
-				topicsParition[topic] = append(topicsParition[topic], partitions...)
-			}
-			consumerGroupAssignedTopicPartition[groupDescrition.GroupId] = topicsParition
 		}
 	}
 
 	consumerGroupMetrics := make([]KafkaConsumerGroupOffsetMetric, 0)
-	for _, group := range s.consumerGroups {
+	for _, group := range consumerGroups {
 		coordinator, err := s.client.Coordinator(group)
 		if err != nil {
 			return err
