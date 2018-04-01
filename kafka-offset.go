@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
@@ -14,10 +15,12 @@ var (
 	sinkName = flag.String("sink", "log", "Sink to use")
 )
 
-func installSignalHandler(stopChs ...chan interface{}) {
+func installSignalHandler(stopChs ...chan interface{}) *sync.WaitGroup {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	var wg sync.WaitGroup
 
+	wg.Add(1)
 	// Block until a signal is received.
 	go func() {
 		sig := <-c
@@ -25,7 +28,9 @@ func installSignalHandler(stopChs ...chan interface{}) {
 			close(stopCh)
 		}
 		logrus.Infof("Exiting given signal: %v", sig)
+		wg.Done()
 	}()
+	return &wg
 }
 
 func main() {
@@ -56,7 +61,11 @@ func main() {
 
 	// Wait until signal
 	stopCh := s.Run()
+	wg := installSignalHandler(stopCh)
 	<-stopCh
+
+	// Wait until cleanup
+	wg.Wait()
 	s.Wait()
 	sink.Wait()
 }

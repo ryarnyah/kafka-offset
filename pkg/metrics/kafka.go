@@ -19,6 +19,7 @@ import (
 // KafkaSource represent kafka cluster source metrics
 type KafkaSource struct {
 	client sarama.Client
+	cfg    *sarama.Config
 
 	stopCh chan interface{}
 	mutex  sync.Mutex
@@ -49,7 +50,9 @@ func NewKafkaSource(sink KafkaSink) (*KafkaSource, error) {
 	}
 
 	var err error
+	sarama.Logger = logrus.StandardLogger()
 	cfg := sarama.NewConfig()
+	cfg.ClientID = "kafka-offset"
 	cfg.Version = sarama.V0_10_0_0
 	cfg.Net.TLS.Config, cfg.Net.TLS.Enable, err = getTLSConfiguration(*cacerts, *cert, *key, *insecure)
 	if err != nil {
@@ -66,6 +69,7 @@ func NewKafkaSource(sink KafkaSink) (*KafkaSource, error) {
 	return &KafkaSource{
 		client: client,
 		sink:   sink,
+		cfg:    cfg,
 	}, nil
 }
 
@@ -84,10 +88,6 @@ func (s *KafkaSource) Run() chan interface{} {
 					logrus.Error(err)
 				}
 			case <-s.stopCh:
-				err := s.Close()
-				if err != nil {
-					logrus.Error(err)
-				}
 				return
 			}
 		}
@@ -96,6 +96,10 @@ func (s *KafkaSource) Run() chan interface{} {
 }
 
 func (s *KafkaSource) fetchMetrics() error {
+	start := time.Now()
+	defer func(startTime time.Time) {
+		logrus.Infof("fetchMetrics took %s", time.Since(startTime))
+	}(start)
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.Add(1)
@@ -150,10 +154,11 @@ func (s *KafkaSource) fetchMetrics() error {
 			lastOffsetsParition[partition] = newestOffset
 		}
 	}
-	err = s.sink.SendOffsetMetrics(offsetMetrics)
+	offsetChan, err := s.sink.SendOffsetMetrics()
 	if err != nil {
 		return err
 	}
+	offsetChan <- offsetMetrics
 
 	// Get all groups / offsets
 	brokers := s.client.Brokers()
@@ -162,6 +167,16 @@ func (s *KafkaSource) fetchMetrics() error {
 	}
 	consumerGroupAssignedTopicPartition := make(map[string]map[string][]int32)
 	for _, broker := range brokers {
+		conn, err := broker.Connected()
+		if err != nil {
+			return err
+		}
+		if !conn {
+			err := broker.Open(s.cfg)
+			if err != nil {
+				return err
+			}
+		}
 		response, err := broker.ListGroups(&sarama.ListGroupsRequest{})
 		if err != nil {
 			return err
@@ -234,16 +249,26 @@ func (s *KafkaSource) fetchMetrics() error {
 			}
 		}
 	}
-	err = s.sink.SendConsumerGroupOffsetMetrics(consumerGroupMetrics)
+	groupChan, err := s.sink.SendConsumerGroupOffsetMetrics()
 	if err != nil {
 		return err
 	}
-
+	groupChan <- consumerGroupMetrics
 	return nil
 }
 
 // Close close kafka client
 func (s *KafkaSource) Close() error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	for _, broker := range s.client.Brokers() {
+		if connected, _ := broker.Connected(); connected {
+			if err := broker.Close(); err != nil {
+				logrus.Errorf("Error closing broker %d : %s", broker.ID(), err)
+			}
+		}
+	}
+
 	return s.client.Close()
 }
 
