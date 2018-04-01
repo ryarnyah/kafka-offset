@@ -32,10 +32,10 @@ func (s *LogSink) SendConsumerGroupOffsetMetrics() (chan<- []metrics.KafkaConsum
 
 // Close do nothing
 func (s *LogSink) Close() error {
-	close(s.offsetChan)
-	close(s.groupChan)
 	close(s.stopCh)
 	s.wg.Wait()
+	close(s.offsetChan)
+	close(s.groupChan)
 	return nil
 }
 
