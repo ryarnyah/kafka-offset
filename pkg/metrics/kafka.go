@@ -14,6 +14,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/Sirupsen/logrus"
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 // KafkaSource represent kafka cluster source metrics
@@ -24,6 +25,12 @@ type KafkaSource struct {
 	stopCh chan interface{}
 	mutex  sync.Mutex
 	sink   KafkaSink
+
+	topicOffsetMeter         map[string]metrics.Meter
+	consumerGroupOffsetMeter map[string]map[string]metrics.Meter
+
+	previousTopicOffset         map[string]int64
+	previousConsumerGroupOffset map[string]int64
 
 	sync.WaitGroup
 }
@@ -66,10 +73,19 @@ func NewKafkaSource(sink KafkaSink) (*KafkaSource, error) {
 		return nil, err
 	}
 
+	topicOffsetMeter := make(map[string]metrics.Meter, 0)
+	consumerGroupOffsetMeter := make(map[string]map[string]metrics.Meter)
+	previousTopicOffset := make(map[string]int64)
+	previousConsumerGroupOffset := make(map[string]int64)
+
 	return &KafkaSource{
-		client: client,
-		sink:   sink,
-		cfg:    cfg,
+		client:                      client,
+		sink:                        sink,
+		cfg:                         cfg,
+		topicOffsetMeter:            topicOffsetMeter,
+		consumerGroupOffsetMeter:    consumerGroupOffsetMeter,
+		previousTopicOffset:         previousTopicOffset,
+		previousConsumerGroupOffset: previousConsumerGroupOffset,
 	}, nil
 }
 
@@ -95,52 +111,38 @@ func (s *KafkaSource) Run() chan interface{} {
 	return s.stopCh
 }
 
-func (s *KafkaSource) fetchMetrics() error {
-	start := time.Now()
-	defer func(startTime time.Time) {
-		logrus.Infof("fetchMetrics took %s", time.Since(startTime))
-	}(start)
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	s.Add(1)
-	defer s.Done()
-
-	var consumerGroups []string
+func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[int32]int64, error) {
 	var topicPartitions = make(map[string][]int32)
-
-	err := s.client.RefreshMetadata()
-	if err != nil {
-		return err
-	}
 	topics, err := s.client.Topics()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Get all topics/partitions
 	for _, topic := range topics {
 		partitions, err := s.client.Partitions(topic)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		topicPartitions[topic] = partitions
 	}
-	// Get all offsets
+
 	lastOffsets := make(map[string]map[int32]int64)
 	offsetMetrics := make([]KafkaOffsetMetric, 0)
 	for topic, partitions := range topicPartitions {
 		for _, partition := range partitions {
 			oldestOffset, err := s.client.GetOffset(topic, partition, sarama.OffsetOldest)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if err != nil {
-				return err
+				return nil, err
 			}
 			newestOffset, err := s.client.GetOffset(topic, partition, sarama.OffsetNewest)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			offsetMetrics = append(offsetMetrics, KafkaOffsetMetric{
+				Timestamp:    start,
 				Topic:        topic,
 				Partition:    partition,
 				NewestOffset: newestOffset,
@@ -153,14 +155,17 @@ func (s *KafkaSource) fetchMetrics() error {
 			}
 			lastOffsetsParition[partition] = newestOffset
 		}
+		// Update topic producer rate
+		s.markTopicOffset(topic, lastOffsets[topic])
 	}
-	offsetChan, err := s.sink.SendOffsetMetrics()
-	if err != nil {
-		return err
-	}
-	offsetChan <- offsetMetrics
+	s.sink.SendOffsetMetrics() <- offsetMetrics
 
-	// Get all groups / offsets
+	return lastOffsets, nil
+}
+
+func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map[string]map[int32]int64) error {
+	var consumerGroups []string
+
 	brokers := s.client.Brokers()
 	if len(brokers) < 1 {
 		return fmt.Errorf("Unable to connect to brokers %+v", brokers)
@@ -232,6 +237,7 @@ func (s *KafkaSource) fetchMetrics() error {
 			return err
 		}
 		for topic, partitions := range response.Blocks {
+			lastGroupOffset := make(map[int32]int64)
 			for partition, offset := range partitions {
 				var lastOffset int64
 				lastOffsetPartitions, ok := lastOffsets[topic]
@@ -240,20 +246,81 @@ func (s *KafkaSource) fetchMetrics() error {
 				}
 
 				consumerGroupMetrics = append(consumerGroupMetrics, KafkaConsumerGroupOffsetMetric{
+					Timestamp: start,
 					Group:     group,
 					Topic:     topic,
 					Partition: partition,
 					Offset:    offset.Offset,
 					Lag:       lastOffset - offset.Offset,
 				})
+				lastGroupOffset[partition] = offset.Offset
 			}
+			// Update consumer rate
+			s.markConsumerGroupOffset(group, topic, lastGroupOffset)
 		}
 	}
-	groupChan, err := s.sink.SendConsumerGroupOffsetMetrics()
+	s.sink.SendConsumerGroupOffsetMetrics() <- consumerGroupMetrics
+
+	return nil
+}
+
+func (s *KafkaSource) fetchMetrics() error {
+	now := time.Now()
+	defer func(startTime time.Time) {
+		logrus.Infof("fetchMetrics took %s", time.Since(startTime))
+	}(now)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.Add(1)
+	defer s.Done()
+
+	err := s.client.RefreshMetadata()
 	if err != nil {
 		return err
 	}
-	groupChan <- consumerGroupMetrics
+	// Get all offsets
+	lastOffsets, err := s.fetchLastOffsetsMetrics(now)
+	if err != nil {
+		return err
+	}
+
+	// Get all groups / offsets
+	err = s.fetchConsumerGroupMetrics(now, lastOffsets)
+	if err != nil {
+		return err
+	}
+
+	topicRateSnap := make([]KafkaTopicRateMetric, 0)
+	for topic, meter := range s.topicOffsetMeter {
+		topicRateSnap = append(topicRateSnap, KafkaTopicRateMetric{
+			Timestamp: now,
+			Topic:     topic,
+			Rate1:     meter.Rate1(),
+			Rate5:     meter.Rate5(),
+			Rate15:    meter.Rate15(),
+			RateMean:  meter.RateMean(),
+			Count:     meter.Count(),
+		})
+	}
+
+	consumerGroupRateSnap := make([]KafkaConsumerGroupRateMetric, 0)
+	for group, topics := range s.consumerGroupOffsetMeter {
+		for topic, meter := range topics {
+			consumerGroupRateSnap = append(consumerGroupRateSnap, KafkaConsumerGroupRateMetric{
+				Timestamp: now,
+				Group:     group,
+				Topic:     topic,
+				Rate1:     meter.Rate1(),
+				Rate5:     meter.Rate5(),
+				Rate15:    meter.Rate15(),
+				RateMean:  meter.RateMean(),
+				Count:     meter.Count(),
+			})
+		}
+	}
+	s.sink.SendTopicRateMetrics() <- topicRateSnap
+	s.sink.SendConsumerGroupRateMetrics() <- consumerGroupRateSnap
 	return nil
 }
 
@@ -266,6 +333,16 @@ func (s *KafkaSource) Close() error {
 			if err := broker.Close(); err != nil {
 				logrus.Errorf("Error closing broker %d : %s", broker.ID(), err)
 			}
+		}
+	}
+
+	for _, meter := range s.topicOffsetMeter {
+		meter.Stop()
+	}
+
+	for _, topicMeter := range s.consumerGroupOffsetMeter {
+		for _, meter := range topicMeter {
+			meter.Stop()
 		}
 	}
 
@@ -307,4 +384,49 @@ func getSASLConfiguration(username string, password string) (string, string, boo
 		return username, password, true
 	}
 	return "", "", false
+}
+
+func (s *KafkaSource) markTopicOffset(topic string, partitionOffsets map[int32]int64) {
+	var offset int64
+
+	// Sum offsets
+	for _, o := range partitionOffsets {
+		offset += o
+	}
+
+	previousOffset, ok := s.previousTopicOffset[topic]
+	if ok {
+		meter, ok := s.topicOffsetMeter[topic]
+		if !ok {
+			s.topicOffsetMeter[topic] = metrics.NewMeter()
+			meter = s.topicOffsetMeter[topic]
+		}
+		meter.Mark(offset - previousOffset)
+	}
+	s.previousTopicOffset[topic] = offset
+}
+
+func (s *KafkaSource) markConsumerGroupOffset(group, topic string, partitionOffsets map[int32]int64) {
+	var offset int64
+
+	// Sum offsets
+	for _, o := range partitionOffsets {
+		offset += o
+	}
+
+	previousOffset, ok := s.previousConsumerGroupOffset[group+"_"+topic]
+	if ok {
+		topics, ok := s.consumerGroupOffsetMeter[group]
+		if !ok {
+			s.consumerGroupOffsetMeter[group] = make(map[string]metrics.Meter)
+			topics = s.consumerGroupOffsetMeter[group]
+		}
+		meter, ok := topics[topic]
+		if !ok {
+			topics[topic] = metrics.NewMeter()
+			meter = topics[topic]
+		}
+		meter.Mark(offset - previousOffset)
+	}
+	s.previousConsumerGroupOffset[group+"_"+topic] = offset
 }
