@@ -1,11 +1,8 @@
 package metrics
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"strings"
@@ -15,6 +12,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Sirupsen/logrus"
 	metrics "github.com/rcrowley/go-metrics"
+	"github.com/ryarnyah/kafka-offset/pkg/util"
 )
 
 // KafkaSource represent kafka cluster source metrics
@@ -24,7 +22,7 @@ type KafkaSource struct {
 
 	stopCh chan interface{}
 	mutex  sync.Mutex
-	sink   KafkaSink
+	sink   Sink
 
 	topicOffsetMeter         map[string]metrics.Meter
 	consumerGroupOffsetMeter map[string]map[string]metrics.Meter
@@ -51,7 +49,7 @@ func init() {
 }
 
 // NewKafkaSource build new kafka source scraper
-func NewKafkaSource(sink KafkaSink) (*KafkaSource, error) {
+func NewKafkaSource(sink Sink) (*KafkaSource, error) {
 	if sink == nil {
 		return nil, fmt.Errorf("Unable to fink KafkaSink in config")
 	}
@@ -61,11 +59,11 @@ func NewKafkaSource(sink KafkaSink) (*KafkaSource, error) {
 	cfg := sarama.NewConfig()
 	cfg.ClientID = "kafka-offset"
 	cfg.Version = sarama.V0_10_0_0
-	cfg.Net.TLS.Config, cfg.Net.TLS.Enable, err = getTLSConfiguration(*cacerts, *cert, *key, *insecure)
+	cfg.Net.TLS.Config, cfg.Net.TLS.Enable, err = util.GetTLSConfiguration(*cacerts, *cert, *key, *insecure)
 	if err != nil {
 		return nil, err
 	}
-	cfg.Net.SASL.User, cfg.Net.SASL.Password, cfg.Net.SASL.Enable = getSASLConfiguration(*username, *password)
+	cfg.Net.SASL.User, cfg.Net.SASL.Password, cfg.Net.SASL.Enable = util.GetSASLConfiguration(*username, *password)
 	brokerList := strings.Split(*brokers, ",")
 
 	client, err := sarama.NewClient(brokerList, cfg)
@@ -142,6 +140,7 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 				return nil, err
 			}
 			offsetMetrics = append(offsetMetrics, KafkaOffsetMetric{
+				Name:         "kafka-topic-offset-metric",
 				Timestamp:    start,
 				Topic:        topic,
 				Partition:    partition,
@@ -246,6 +245,7 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 				}
 
 				consumerGroupMetrics = append(consumerGroupMetrics, KafkaConsumerGroupOffsetMetric{
+					Name:      "kafka-consumer-group-metric",
 					Timestamp: start,
 					Group:     group,
 					Topic:     topic,
@@ -294,6 +294,7 @@ func (s *KafkaSource) fetchMetrics() error {
 	topicRateSnap := make([]KafkaTopicRateMetric, 0)
 	for topic, meter := range s.topicOffsetMeter {
 		topicRateSnap = append(topicRateSnap, KafkaTopicRateMetric{
+			Name:      "kafka-topic-rate-metric",
 			Timestamp: now,
 			Topic:     topic,
 			Rate1:     meter.Rate1(),
@@ -308,6 +309,7 @@ func (s *KafkaSource) fetchMetrics() error {
 	for group, topics := range s.consumerGroupOffsetMeter {
 		for topic, meter := range topics {
 			consumerGroupRateSnap = append(consumerGroupRateSnap, KafkaConsumerGroupRateMetric{
+				Name:      "kafka-consumer-group-rate-metric",
 				Timestamp: now,
 				Group:     group,
 				Topic:     topic,
@@ -347,43 +349,6 @@ func (s *KafkaSource) Close() error {
 	}
 
 	return s.client.Close()
-}
-
-func getTLSConfiguration(caFile string, certFile string, keyFile string, insecure bool) (*tls.Config, bool, error) {
-	logrus.Debugf("configure tls %s %s %s %b", caFile, certFile, keyFile, insecure)
-	if caFile == "" && (certFile == "" || keyFile == "") {
-		return nil, false, nil
-	}
-	t := &tls.Config{}
-	if caFile != "" {
-		caCert, err := ioutil.ReadFile(caFile)
-		if err != nil {
-			return nil, false, err
-		}
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
-		t.RootCAs = caCertPool
-	}
-
-	if certFile != "" && keyFile != "" {
-		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-		if err != nil {
-			return nil, false, err
-		}
-		t.Certificates = []tls.Certificate{cert}
-	}
-
-	t.InsecureSkipVerify = insecure
-	logrus.Debugf("TLS config %+v", t)
-
-	return t, true, nil
-}
-
-func getSASLConfiguration(username string, password string) (string, string, bool) {
-	if username != "" && password != "" {
-		return username, password, true
-	}
-	return "", "", false
 }
 
 func (s *KafkaSource) markTopicOffset(topic string, partitionOffsets map[int32]int64) {

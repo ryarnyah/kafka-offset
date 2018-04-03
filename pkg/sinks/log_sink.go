@@ -58,7 +58,7 @@ func (s *LogSink) Wait() {
 }
 
 // NewLogSink build sink
-func NewLogSink() (metrics.KafkaSink, error) {
+func NewLogSink() (metrics.Sink, error) {
 	offsetChan := make(chan []metrics.KafkaOffsetMetric, 1024)
 	groupChan := make(chan []metrics.KafkaConsumerGroupOffsetMetric, 1024)
 	topicRateChan := make(chan []metrics.KafkaTopicRateMetric, 1024)
