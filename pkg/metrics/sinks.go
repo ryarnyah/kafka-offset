@@ -4,27 +4,29 @@ import (
 	"fmt"
 )
 
-var registeredSinks = map[string](KafkaSinkFunc){}
+var registeredSinks = map[string](SinkFunc){}
 
-// KafkaSink reprensent sink for kafka metrics
-type KafkaSink interface {
-	SendOffsetMetrics() (chan<- []KafkaOffsetMetric, error)
-	SendConsumerGroupOffsetMetrics() (chan<- []KafkaConsumerGroupOffsetMetric, error)
+// Sink reprensent sink for kafka metrics
+type Sink interface {
+	SendOffsetMetrics() chan<- []KafkaOffsetMetric
+	SendConsumerGroupOffsetMetrics() chan<- []KafkaConsumerGroupOffsetMetric
+	SendTopicRateMetrics() chan<- []KafkaTopicRateMetric
+	SendConsumerGroupRateMetrics() chan<- []KafkaConsumerGroupRateMetric
 	Close() error
 	// sync.Waitgroup until close
 	Wait()
 }
 
-// KafkaSinkFunc build new KafkaSink
-type KafkaSinkFunc func() (KafkaSink, error)
+// SinkFunc build new KafkaSink
+type SinkFunc func() (Sink, error)
 
 // RegisterSink register a new sink to be used by kafka-offset
-func RegisterSink(name string, f KafkaSinkFunc) {
+func RegisterSink(name string, f SinkFunc) {
 	registeredSinks[name] = f
 }
 
 // New build sink by it's regitred name
-func New(name string) (KafkaSink, error) {
+func New(name string) (Sink, error) {
 	if name == "" {
 		return nil, nil
 	}

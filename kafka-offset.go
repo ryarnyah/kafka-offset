@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	sinkName = flag.String("sink", "log", "Sink to use")
+	sinkName = flag.String("sink", "log", "Sink to use (log, kafka, elasticsearch)")
 )
 
 func installSignalHandler(stopChs ...chan interface{}) *sync.WaitGroup {

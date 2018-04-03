@@ -2,4 +2,4 @@
 
 #### Binaries
 
-- **linux** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.0.4/kafka-offset-linux-amd64)
+- **linux** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.0.5/kafka-offset-linux-amd64)
