@@ -140,7 +140,6 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 				return nil, err
 			}
 			offsetMetrics = append(offsetMetrics, KafkaOffsetMetric{
-				Name:         "kafka-topic-offset-metric",
 				Timestamp:    start,
 				Topic:        topic,
 				Partition:    partition,
@@ -245,7 +244,6 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 				}
 
 				consumerGroupMetrics = append(consumerGroupMetrics, KafkaConsumerGroupOffsetMetric{
-					Name:      "kafka-consumer-group-metric",
 					Timestamp: start,
 					Group:     group,
 					Topic:     topic,
@@ -294,7 +292,6 @@ func (s *KafkaSource) fetchMetrics() error {
 	topicRateSnap := make([]KafkaTopicRateMetric, 0)
 	for topic, meter := range s.topicOffsetMeter {
 		topicRateSnap = append(topicRateSnap, KafkaTopicRateMetric{
-			Name:      "kafka-topic-rate-metric",
 			Timestamp: now,
 			Topic:     topic,
 			Rate1:     meter.Rate1(),
@@ -309,7 +306,6 @@ func (s *KafkaSource) fetchMetrics() error {
 	for group, topics := range s.consumerGroupOffsetMeter {
 		for topic, meter := range topics {
 			consumerGroupRateSnap = append(consumerGroupRateSnap, KafkaConsumerGroupRateMetric{
-				Name:      "kafka-consumer-group-rate-metric",
 				Timestamp: now,
 				Group:     group,
 				Topic:     topic,

@@ -1,9 +1,10 @@
-package metrics
+package kafka
 
 import "time"
 
-// KafkaOffsetMetric metric for topic/partition with oldest and newest offset
-type KafkaOffsetMetric struct {
+// OffsetMetric metric for topic/partition with oldest and newest offset
+type OffsetMetric struct {
+	Name         string    `json:"name,omitempty"`
 	Timestamp    time.Time `json:"timestamp,omitempty"`
 	Topic        string    `json:"topic,omitempty"`
 	Partition    int32     `json:"partition,omitempty"`
@@ -11,8 +12,9 @@ type KafkaOffsetMetric struct {
 	NewestOffset int64     `json:"newest_offset,omitempty"`
 }
 
-// KafkaConsumerGroupOffsetMetric metric for consumer group
-type KafkaConsumerGroupOffsetMetric struct {
+// ConsumerGroupOffsetMetric metric for consumer group
+type ConsumerGroupOffsetMetric struct {
+	Name      string    `json:"name,omitempty"`
 	Timestamp time.Time `json:"timestamp,omitempty"`
 	Group     string    `json:"group,omitempty"`
 	Topic     string    `json:"topic,omitempty"`
@@ -21,8 +23,9 @@ type KafkaConsumerGroupOffsetMetric struct {
 	Lag       int64     `json:"lag,omitempty"`
 }
 
-// KafkaTopicRateMetric rate topic writes per seconds
-type KafkaTopicRateMetric struct {
+// TopicRateMetric rate topic writes per seconds
+type TopicRateMetric struct {
+	Name      string    `json:"name,omitempty"`
 	Timestamp time.Time `json:"timestamp,omitempty"`
 	Topic     string    `json:"topic,omitempty"`
 	Rate1     float64   `json:"rate1,omitempty"`
@@ -32,8 +35,9 @@ type KafkaTopicRateMetric struct {
 	Count     int64     `json:"count,omitempty"`
 }
 
-// KafkaConsumerGroupRateMetric rate consumer group read/commit per seconds
-type KafkaConsumerGroupRateMetric struct {
+// ConsumerGroupRateMetric rate consumer group read/commit per seconds
+type ConsumerGroupRateMetric struct {
+	Name      string    `json:"name,omitempty"`
 	Timestamp time.Time `json:"timestamp,omitempty"`
 	Group     string    `json:"group,omitempty"`
 	Topic     string    `json:"topic,omitempty"`
