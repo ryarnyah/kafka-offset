@@ -5,11 +5,11 @@ import (
 	"flag"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/Shopify/sarama"
 	"github.com/Sirupsen/logrus"
 	"github.com/ryarnyah/kafka-offset/pkg/metrics"
+	"github.com/ryarnyah/kafka-offset/pkg/sinks/common"
 	"github.com/ryarnyah/kafka-offset/pkg/util"
 )
 
@@ -19,20 +19,15 @@ func init() {
 
 // Sink write metrics to kafka topic
 type Sink struct {
-	offsetChan    chan []metrics.KafkaOffsetMetric
-	groupChan     chan []metrics.KafkaConsumerGroupOffsetMetric
-	topicRateChan chan []metrics.KafkaTopicRateMetric
-	groupRateChan chan []metrics.KafkaConsumerGroupRateMetric
-	stopCh        chan interface{}
-
 	producer sarama.SyncProducer
 	topic    string
 
-	wg sync.WaitGroup
+	*common.Sink
 }
 
 var (
 	kafkaSinkBrokers  = flag.String("kafka-sink-brokers", "localhost:9092", "Kafka sink brokers")
+	kafkaSinkVersion  = flag.String("kafka-sink-version", sarama.V0_10_2_0.String(), "Kafka sink broker version")
 	kafkaSinkCacerts  = flag.String("kafka-sink-ssl-cacerts", "", "Kafka SSL cacerts")
 	kafkaSinkCert     = flag.String("kafka-sink-ssl-cert", "", "Kafka SSL cert")
 	kafkaSinkKey      = flag.String("kafka-sink-ssl-key", "", "Kafka SSL key")
@@ -42,189 +37,175 @@ var (
 	kafkaSinkTopic    = flag.String("kafka-sink-topic", "metrics", "Kafka topic to send metrics")
 )
 
-// GetOffsetMetricsChan return offset channel
-func (sink *Sink) GetOffsetMetricsChan() chan<- []metrics.KafkaOffsetMetric {
-	return sink.offsetChan
-}
-
-// GetConsumerGroupOffsetMetricsChan return consumer group offset channel
-func (sink *Sink) GetConsumerGroupOffsetMetricsChan() chan<- []metrics.KafkaConsumerGroupOffsetMetric {
-	return sink.groupChan
-}
-
-// GetTopicRateMetricsChan return topic rate offset channel
-func (sink *Sink) GetTopicRateMetricsChan() chan<- []metrics.KafkaTopicRateMetric {
-	return sink.topicRateChan
-}
-
-// GetConsumerGroupRateMetricsChan return consumer group rate offset channel
-func (sink *Sink) GetConsumerGroupRateMetricsChan() chan<- []metrics.KafkaConsumerGroupRateMetric {
-	return sink.groupRateChan
-}
-
 // Close close producer and channels
-func (sink *Sink) Close() error {
-	close(sink.stopCh)
-	sink.wg.Wait()
-	close(sink.offsetChan)
-	close(sink.groupChan)
-	close(sink.topicRateChan)
-	close(sink.groupRateChan)
-	err := sink.producer.Close()
+func (s *Sink) closeProducer() error {
+	logrus.Info("Closing producer")
+	err := s.producer.Close()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (sink *Sink) run() {
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.groupChan:
-				for _, metric := range metrics {
-					b, err := json.Marshal(ConsumerGroupOffsetMetric{
-						Name:      "kafka-consumer-group-offset-metric",
-						Timestamp: metric.Timestamp,
-						Group:     metric.Group,
-						Topic:     metric.Topic,
-						Partition: metric.Partition,
-						Offset:    metric.Offset,
-						Lag:       metric.Lag,
-					})
-					if err != nil {
-						logrus.Error(err)
-					} else {
-						_, _, err := s.producer.SendMessage(&sarama.ProducerMessage{
-							Topic: s.topic,
-							Value: sarama.ByteEncoder(b),
-						})
-						if err != nil {
-							logrus.Error(err)
-						}
-					}
-				}
-			case <-s.stopCh:
-				logrus.Info("Kafka ConsumerGroupOffsetMetrics Stoped")
-				return
-			}
-		}
-	}(sink)
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.offsetChan:
-				for _, metric := range metrics {
-					b, err := json.Marshal(OffsetMetric{
-						Name:         "kafka-topic-offset-metric",
-						Timestamp:    metric.Timestamp,
-						Topic:        metric.Topic,
-						Partition:    metric.Partition,
-						OldestOffset: metric.OldestOffset,
-						NewestOffset: metric.NewestOffset,
-					})
-					if err != nil {
-						logrus.Error(err)
-					} else {
-						_, _, err := s.producer.SendMessage(&sarama.ProducerMessage{
-							Topic: s.topic,
-							Value: sarama.ByteEncoder(b),
-						})
-						if err != nil {
-							logrus.Error(err)
-						}
-					}
-				}
-			case <-s.stopCh:
-				logrus.Info("Kafka OffsetMetrics Stoped")
-				return
-			}
-		}
-	}(sink)
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.groupRateChan:
-				for _, metric := range metrics {
-					b, err := json.Marshal(ConsumerGroupRateMetric{
-						Name:      "kafka-consumer-group-rate-metric",
-						Timestamp: metric.Timestamp,
-						Topic:     metric.Topic,
-						Rate1:     metric.Rate1,
-						Rate5:     metric.Rate5,
-						Rate15:    metric.Rate15,
-						RateMean:  metric.RateMean,
-						Count:     metric.Count,
-					})
-					if err != nil {
-						logrus.Error(err)
-					} else {
-						_, _, err := s.producer.SendMessage(&sarama.ProducerMessage{
-							Topic: s.topic,
-							Value: sarama.ByteEncoder(b),
-						})
-						if err != nil {
-							logrus.Error(err)
-						}
-					}
-				}
-			case <-s.stopCh:
-				logrus.Info("Kafka GroupRateChan Stoped")
-				return
-			}
-		}
-	}(sink)
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.topicRateChan:
-				for _, metric := range metrics {
-					b, err := json.Marshal(TopicRateMetric{
-						Name:      "kafka-topic-rate-metric",
-						Timestamp: metric.Timestamp,
-						Topic:     metric.Topic,
-						Rate1:     metric.Rate1,
-						Rate5:     metric.Rate5,
-						Rate15:    metric.Rate15,
-						RateMean:  metric.RateMean,
-						Count:     metric.Count,
-					})
-					if err != nil {
-						logrus.Error(err)
-					} else {
-						_, _, err := s.producer.SendMessage(&sarama.ProducerMessage{
-							Topic: s.topic,
-							Value: sarama.ByteEncoder(b),
-						})
-						if err != nil {
-							logrus.Error(err)
-						}
-					}
-				}
-			case <-s.stopCh:
-				logrus.Info("Kafka TopicRateChan Stoped")
-				return
-			}
-		}
-	}(sink)
+func (s *Sink) sendMessage(msg interface{}) error {
+	b, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	_, _, err = s.producer.SendMessage(&sarama.ProducerMessage{
+		Topic: s.topic,
+		Value: sarama.ByteEncoder(b),
+	})
+	if err != nil {
+		return err
+	}
 
+	return nil
+
+}
+
+func (s *Sink) offsetMetrics(metrics []metrics.KafkaOffsetMetric) error {
+	for _, metric := range metrics {
+		m := offsetMetric{
+			Name:              "kafka-topic-offset-metric",
+			KafkaOffsetMetric: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) consumerGroupOffsetMetrics(metrics []metrics.KafkaConsumerGroupOffsetMetric) error {
+	for _, metric := range metrics {
+		m := consumerGroupOffsetMetric{
+			Name: "kafka-consumer-group-offset-metric",
+			KafkaConsumerGroupOffsetMetric: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) topicRateMetrics(metrics []metrics.KafkaTopicRateMetric) error {
+	for _, metric := range metrics {
+		m := topicRateMetric{
+			Name:                 "kafka-topic-rate-metric",
+			KafkaTopicRateMetric: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) consumerGroupRateMetrics(metrics []metrics.KafkaConsumerGroupRateMetric) error {
+	for _, metric := range metrics {
+		m := consumerGroupRateMetric{
+			Name: "kafka-consumer-group-rate-metric",
+			KafkaConsumerGroupRateMetric: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) topicPartitionMetrics(metrics []metrics.KafkaTopicPartitions) error {
+	for _, metric := range metrics {
+		m := topicPartitions{
+			Name:                 "kafka-topic-partition-metric",
+			KafkaTopicPartitions: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) replicasTopicPartitionMetrics(metrics []metrics.KafkaReplicasTopicPartition) error {
+	for _, metric := range metrics {
+		m := replicasTopicPartition{
+			Name: "kafka-replicas-topic-partition-metric",
+			KafkaReplicasTopicPartition: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) inSyncReplicasMetrics(metrics []metrics.KafkaInSyncReplicas) error {
+	for _, metric := range metrics {
+		m := inSyncReplicas{
+			Name:                "kafka-in-sync-replicas-metric",
+			KafkaInSyncReplicas: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) leaderTopicPartitionMetrics(metrics []metrics.KafkaLeaderTopicPartition) error {
+	for _, metric := range metrics {
+		m := leaderTopicPartition{
+			Name: "kafka-leader-topic-partition-metric",
+			KafkaLeaderTopicPartition: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) leaderIsPreferredTopicPartitionMetrics(metrics []metrics.KafkaLeaderIsPreferredTopicPartition) error {
+	for _, metric := range metrics {
+		m := leaderIsPreferredTopicPartition{
+			Name: "kafka-leader-is-preferred-topic-partition-metric",
+			KafkaLeaderIsPreferredTopicPartition: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) underReplicatedTopicPartitionMetrics(metrics []metrics.KafkaUnderReplicatedTopicPartition) error {
+	for _, metric := range metrics {
+		m := underReplicatedTopicPartition{
+			Name: "kafka-under-replicated-topic-partition-metric",
+			KafkaUnderReplicatedTopicPartition: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // NewSink build new kafka sink
 func NewSink() (metrics.Sink, error) {
 	var err error
+	version, err := sarama.ParseKafkaVersion(*kafkaSinkVersion)
+	if err != nil {
+		return nil, err
+	}
 	sarama.Logger = logrus.StandardLogger()
 	cfg := sarama.NewConfig()
 	cfg.ClientID = "kafka-sink"
-	cfg.Version = sarama.V0_10_0_0
+	cfg.Version = version
 	cfg.Producer.Return.Successes = true
 	cfg.Net.TLS.Config, cfg.Net.TLS.Enable, err = util.GetTLSConfiguration(*kafkaSinkCacerts, *kafkaSinkCert, *kafkaSinkKey, *kafkaSinkInsecure)
 	if err != nil {
@@ -238,22 +219,24 @@ func NewSink() (metrics.Sink, error) {
 		return nil, err
 	}
 
-	offsetChan := make(chan []metrics.KafkaOffsetMetric, 1024)
-	groupChan := make(chan []metrics.KafkaConsumerGroupOffsetMetric, 1024)
-	topicRateChan := make(chan []metrics.KafkaTopicRateMetric, 1024)
-	groupRateChan := make(chan []metrics.KafkaConsumerGroupRateMetric, 1024)
-	stopCh := make(chan interface{})
-
 	sink := &Sink{
-		offsetChan:    offsetChan,
-		groupChan:     groupChan,
-		topicRateChan: topicRateChan,
-		groupRateChan: groupRateChan,
-		stopCh:        stopCh,
-
 		producer: producer,
 		topic:    *kafkaSinkTopic,
+		Sink:     common.NewCommonSink(),
 	}
-	sink.run()
+	sink.OffsetFunc = sink.offsetMetrics
+	sink.GroupFunc = sink.consumerGroupOffsetMetrics
+	sink.TopicRateFunc = sink.topicRateMetrics
+	sink.GroupRateFunc = sink.consumerGroupRateMetrics
+	sink.TopicPartitionFunc = sink.topicPartitionMetrics
+	sink.ReplicasTopicPartitionFunc = sink.replicasTopicPartitionMetrics
+	sink.InsyncReplicasFunc = sink.inSyncReplicasMetrics
+	sink.LeaderTopicPartitionFunc = sink.leaderTopicPartitionMetrics
+	sink.LeaderIsPreferredTopicParitionFunc = sink.leaderIsPreferredTopicPartitionMetrics
+	sink.UnderReplicatedTopicPartitionFunc = sink.underReplicatedTopicPartitionMetrics
+	sink.CloseFunc = sink.closeProducer
+
+	sink.Run()
+
 	return sink, nil
 }

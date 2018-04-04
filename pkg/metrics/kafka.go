@@ -35,6 +35,7 @@ type KafkaSource struct {
 
 var (
 	sourceBrokers        = flag.String("source-brokers", "localhost:9092", "Kafka source brokers")
+	sourceKafkaVersion   = flag.String("source-kafka-version", sarama.V0_10_2_0.String(), "Kafka source broker version")
 	sourceCacerts        = flag.String("source-ssl-cacerts", "", "Kafka SSL cacerts")
 	sourceCert           = flag.String("source-ssl-cert", "", "Kafka SSL cert")
 	sourceKey            = flag.String("source-ssl-key", "", "Kafka SSL key")
@@ -55,10 +56,14 @@ func NewKafkaSource(sink Sink) (*KafkaSource, error) {
 	}
 
 	var err error
+	version, err := sarama.ParseKafkaVersion(*sourceKafkaVersion)
+	if err != nil {
+		return nil, err
+	}
 	sarama.Logger = logrus.StandardLogger()
 	cfg := sarama.NewConfig()
 	cfg.ClientID = "kafka-offset"
-	cfg.Version = sarama.V0_10_0_0
+	cfg.Version = version
 	cfg.Net.TLS.Config, cfg.Net.TLS.Enable, err = util.GetTLSConfiguration(*sourceCacerts, *sourceCert, *sourceKey, *sourceInsecure)
 	if err != nil {
 		return nil, err
@@ -115,6 +120,8 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 	if err != nil {
 		return nil, err
 	}
+
+	var topicPartitionsMetric []KafkaTopicPartitions
 	// Get all topics/partitions
 	for _, topic := range topics {
 		partitions, err := s.client.Partitions(topic)
@@ -122,7 +129,18 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 			return nil, err
 		}
 		topicPartitions[topic] = partitions
+		topicPartitionsMetric = append(topicPartitionsMetric, KafkaTopicPartitions{
+			Timestamp:       start,
+			Topic:           topic,
+			PartitionNumber: len(partitions),
+		})
 	}
+
+	var replicasTopicPartitionMetrics []KafkaReplicasTopicPartition
+	var inSyncReplicasMetrics []KafkaInSyncReplicas
+	var leaderTopicPartitionMetrics []KafkaLeaderTopicPartition
+	var leaderIsPreferredTopicPartitionMetrics []KafkaLeaderIsPreferredTopicPartition
+	var underReplicatedTopicPartitionMetrics []KafkaUnderReplicatedTopicPartition
 
 	lastOffsets := make(map[string]map[int32]int64)
 	offsetMetrics := make([]KafkaOffsetMetric, 0)
@@ -152,11 +170,63 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 				lastOffsetsParition = lastOffsets[topic]
 			}
 			lastOffsetsParition[partition] = newestOffset
+
+			leader, err := s.client.Leader(topic, partition)
+			if err != nil {
+				return nil, err
+			}
+			if leader != nil {
+				leaderTopicPartitionMetrics = append(leaderTopicPartitionMetrics, KafkaLeaderTopicPartition{
+					Timestamp: start,
+					Topic:     topic,
+					Partition: partition,
+					NodeID:    leader.ID(),
+				})
+			}
+
+			replicas, err := s.client.Replicas(topic, partition)
+			if err != nil {
+				return nil, err
+			}
+			replicasTopicPartitionMetrics = append(replicasTopicPartitionMetrics, KafkaReplicasTopicPartition{
+				Timestamp: start,
+				Topic:     topic,
+				Partition: partition,
+				Replicas:  len(replicas),
+			})
+			inSyncReplicas, err := s.client.InSyncReplicas(topic, partition)
+			if err != nil {
+				return nil, err
+			}
+			inSyncReplicasMetrics = append(inSyncReplicasMetrics, KafkaInSyncReplicas{
+				Timestamp:      start,
+				Topic:          topic,
+				Partition:      partition,
+				InSyncReplicas: len(inSyncReplicas),
+			})
+			leaderIsPreferredTopicPartitionMetrics = append(leaderIsPreferredTopicPartitionMetrics, KafkaLeaderIsPreferredTopicPartition{
+				Timestamp:   start,
+				Topic:       topic,
+				Partition:   partition,
+				IsPreferred: (leader != nil && replicas != nil && len(replicas) > 0 && leader.ID() == replicas[0]),
+			})
+			underReplicatedTopicPartitionMetrics = append(underReplicatedTopicPartitionMetrics, KafkaUnderReplicatedTopicPartition{
+				Timestamp:         start,
+				Topic:             topic,
+				Partition:         partition,
+				IsUnderReplicated: (replicas != nil && inSyncReplicas != nil && len(inSyncReplicas) < len(replicas)),
+			})
 		}
 		// Update topic producer rate
 		s.markTopicOffset(topic, lastOffsets[topic])
 	}
+	s.sink.GetTopicPartitionChan() <- topicPartitionsMetric
+	s.sink.GetReplicasTopicPartitionChan() <- replicasTopicPartitionMetrics
+	s.sink.GetInSyncReplicasChan() <- inSyncReplicasMetrics
 	s.sink.GetOffsetMetricsChan() <- offsetMetrics
+	s.sink.GetLeaderTopicPartitionChan() <- leaderTopicPartitionMetrics
+	s.sink.GetLeaderisPreferredTopicPartitionChan() <- leaderIsPreferredTopicPartitionMetrics
+	s.sink.GetUnderReplicatedTopicPartitionChan() <- underReplicatedTopicPartitionMetrics
 
 	return lastOffsets, nil
 }

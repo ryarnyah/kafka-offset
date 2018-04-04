@@ -4,12 +4,11 @@ import (
 	"context"
 	"flag"
 	"os"
-	"sync"
 
-	"github.com/Sirupsen/logrus"
 	elastic "github.com/olivere/elastic"
 	elastic_config "github.com/olivere/elastic/config"
 	"github.com/ryarnyah/kafka-offset/pkg/metrics"
+	"github.com/ryarnyah/kafka-offset/pkg/sinks/common"
 )
 
 func init() {
@@ -18,16 +17,10 @@ func init() {
 
 // Sink write metrics to elasticsearch
 type Sink struct {
-	offsetChan    chan []metrics.KafkaOffsetMetric
-	groupChan     chan []metrics.KafkaConsumerGroupOffsetMetric
-	topicRateChan chan []metrics.KafkaTopicRateMetric
-	groupRateChan chan []metrics.KafkaConsumerGroupRateMetric
-	stopCh        chan interface{}
-
 	client *elastic.Client
 	index  string
 
-	wg sync.WaitGroup
+	*common.Sink
 }
 
 var (
@@ -37,164 +30,147 @@ var (
 	elasticsearchPassword = flag.String("elasticsearch-password", os.Getenv("SINK_ELASTICSEARCH_PASSWORD"), "Elasticsearch password")
 )
 
-// GetOffsetMetricsChan return offset channel
-func (sink *Sink) GetOffsetMetricsChan() chan<- []metrics.KafkaOffsetMetric {
-	return sink.offsetChan
-}
-
-// GetConsumerGroupOffsetMetricsChan return consumer group offset channel
-func (sink *Sink) GetConsumerGroupOffsetMetricsChan() chan<- []metrics.KafkaConsumerGroupOffsetMetric {
-	return sink.groupChan
-}
-
-// GetTopicRateMetricsChan return topic rate offset channel
-func (sink *Sink) GetTopicRateMetricsChan() chan<- []metrics.KafkaTopicRateMetric {
-	return sink.topicRateChan
-}
-
-// GetConsumerGroupRateMetricsChan return consumer group rate offset channel
-func (sink *Sink) GetConsumerGroupRateMetricsChan() chan<- []metrics.KafkaConsumerGroupRateMetric {
-	return sink.groupRateChan
-}
-
-// Close close all channels
-func (sink *Sink) Close() error {
-	close(sink.stopCh)
-	sink.wg.Wait()
-	close(sink.offsetChan)
-	close(sink.groupChan)
-	close(sink.topicRateChan)
-	close(sink.groupRateChan)
+func (s *Sink) sendMessage(msg interface{}) error {
+	_, err := s.client.Index().
+		Index(s.index).
+		Type("doc").
+		BodyJson(msg).
+		Do(context.Background())
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (sink *Sink) run() {
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.groupChan:
-				for _, metric := range metrics {
-					m := ConsumerGroupOffsetMetric{
-						Name:      "kafka-consumer-group-offset-metric",
-						Timestamp: metric.Timestamp,
-						Group:     metric.Group,
-						Topic:     metric.Topic,
-						Partition: metric.Partition,
-						Offset:    metric.Offset,
-						Lag:       metric.Lag,
-					}
-					_, err := s.client.Index().
-						Index(s.index).
-						Type("doc").
-						BodyJson(m).
-						Do(context.Background())
-					if err != nil {
-						logrus.Error(err)
-					}
-				}
-			case <-s.stopCh:
-				logrus.Info("Elasticsearch ConsumerGroupOffsetMetrics Stoped")
-				return
-			}
+func (s *Sink) offsetMetrics(metrics []metrics.KafkaOffsetMetric) error {
+	for _, metric := range metrics {
+		m := offsetMetric{
+			Name:              "kafka-topic-offset-metric",
+			KafkaOffsetMetric: &metric,
 		}
-	}(sink)
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.offsetChan:
-				for _, metric := range metrics {
-					m := OffsetMetric{
-						Name:         "kafka-topic-offset-metric",
-						Timestamp:    metric.Timestamp,
-						Topic:        metric.Topic,
-						Partition:    metric.Partition,
-						OldestOffset: metric.OldestOffset,
-						NewestOffset: metric.NewestOffset,
-					}
-					_, err := s.client.Index().
-						Index(s.index).
-						Type("doc").
-						BodyJson(m).
-						Do(context.Background())
-					if err != nil {
-						logrus.Error(err)
-					}
-				}
-			case <-s.stopCh:
-				logrus.Info("Elasticsearch OffsetMetrics Stoped")
-				return
-			}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
 		}
-	}(sink)
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.groupRateChan:
-				for _, metric := range metrics {
-					m := ConsumerGroupRateMetric{
-						Name:      "kafka-consumer-group-rate-metric",
-						Timestamp: metric.Timestamp,
-						Topic:     metric.Topic,
-						Rate1:     metric.Rate1,
-						Rate5:     metric.Rate5,
-						Rate15:    metric.Rate15,
-						RateMean:  metric.RateMean,
-						Count:     metric.Count,
-					}
-					_, err := s.client.Index().
-						Index(s.index).
-						Type("doc").
-						BodyJson(m).
-						Do(context.Background())
-					if err != nil {
-						logrus.Error(err)
-					}
-				}
-			case <-s.stopCh:
-				logrus.Info("Elasticsearch GroupRateChan Stoped")
-				return
-			}
+	}
+	return nil
+}
+func (s *Sink) consumerGroupOffsetMetrics(metrics []metrics.KafkaConsumerGroupOffsetMetric) error {
+	for _, metric := range metrics {
+		m := consumerGroupOffsetMetric{
+			Name: "kafka-consumer-group-offset-metric",
+			KafkaConsumerGroupOffsetMetric: &metric,
 		}
-	}(sink)
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.topicRateChan:
-				for _, metric := range metrics {
-					m := TopicRateMetric{
-						Name:      "kafka-topic-rate-metric",
-						Timestamp: metric.Timestamp,
-						Topic:     metric.Topic,
-						Rate1:     metric.Rate1,
-						Rate5:     metric.Rate5,
-						Rate15:    metric.Rate15,
-						RateMean:  metric.RateMean,
-						Count:     metric.Count,
-					}
-					_, err := s.client.Index().
-						Index(s.index).
-						Type("doc").
-						BodyJson(m).
-						Do(context.Background())
-					if err != nil {
-						logrus.Error(err)
-					}
-				}
-			case <-s.stopCh:
-				logrus.Info("Elasticsearch TopicRateChan Stoped")
-				return
-			}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
 		}
-	}(sink)
-
+	}
+	return nil
+}
+func (s *Sink) topicRateMetrics(metrics []metrics.KafkaTopicRateMetric) error {
+	for _, metric := range metrics {
+		m := topicRateMetric{
+			Name:                 "kafka-topic-rate-metric",
+			KafkaTopicRateMetric: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) consumerGroupRateMetrics(metrics []metrics.KafkaConsumerGroupRateMetric) error {
+	for _, metric := range metrics {
+		m := consumerGroupRateMetric{
+			Name: "kafka-consumer-group-rate-metric",
+			KafkaConsumerGroupRateMetric: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) topicPartitionMetrics(metrics []metrics.KafkaTopicPartitions) error {
+	for _, metric := range metrics {
+		m := topicPartitions{
+			Name:                 "kafka-topic-partition-metric",
+			KafkaTopicPartitions: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) replicasTopicPartitionMetrics(metrics []metrics.KafkaReplicasTopicPartition) error {
+	for _, metric := range metrics {
+		m := replicasTopicPartition{
+			Name: "kafka-replicas-topic-partition-metric",
+			KafkaReplicasTopicPartition: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) inSyncReplicasMetrics(metrics []metrics.KafkaInSyncReplicas) error {
+	for _, metric := range metrics {
+		m := inSyncReplicas{
+			Name:                "kafka-in-sync-replicas-metric",
+			KafkaInSyncReplicas: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) leaderTopicPartitionMetrics(metrics []metrics.KafkaLeaderTopicPartition) error {
+	for _, metric := range metrics {
+		m := leaderTopicPartition{
+			Name: "kafka-leader-topic-partition-metric",
+			KafkaLeaderTopicPartition: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) leaderIsPreferredTopicPartitionMetrics(metrics []metrics.KafkaLeaderIsPreferredTopicPartition) error {
+	for _, metric := range metrics {
+		m := leaderIsPreferredTopicPartition{
+			Name: "kafka-leader-is-preferred-topic-partition-metric",
+			KafkaLeaderIsPreferredTopicPartition: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *Sink) underReplicatedTopicPartitionMetrics(metrics []metrics.KafkaUnderReplicatedTopicPartition) error {
+	for _, metric := range metrics {
+		m := underReplicatedTopicPartition{
+			Name: "kafka-under-replicated-topic-partition-metric",
+			KafkaUnderReplicatedTopicPartition: &metric,
+		}
+		err := s.sendMessage(m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // NewSink build elasticsearch sink
@@ -207,24 +183,24 @@ func NewSink() (metrics.Sink, error) {
 	if err != nil {
 		return nil, err
 	}
-	offsetChan := make(chan []metrics.KafkaOffsetMetric, 1024)
-	groupChan := make(chan []metrics.KafkaConsumerGroupOffsetMetric, 1024)
-	topicRateChan := make(chan []metrics.KafkaTopicRateMetric, 1024)
-	groupRateChan := make(chan []metrics.KafkaConsumerGroupRateMetric, 1024)
-	stopCh := make(chan interface{})
-
 	sink := &Sink{
-		offsetChan:    offsetChan,
-		groupChan:     groupChan,
-		topicRateChan: topicRateChan,
-		groupRateChan: groupRateChan,
-		stopCh:        stopCh,
-
 		client: client,
 		index:  *elasticsearchIndex,
+		Sink:   common.NewCommonSink(),
 	}
 
-	sink.run()
+	sink.OffsetFunc = sink.offsetMetrics
+	sink.GroupFunc = sink.consumerGroupOffsetMetrics
+	sink.TopicRateFunc = sink.topicRateMetrics
+	sink.GroupRateFunc = sink.consumerGroupRateMetrics
+	sink.TopicPartitionFunc = sink.topicPartitionMetrics
+	sink.ReplicasTopicPartitionFunc = sink.replicasTopicPartitionMetrics
+	sink.InsyncReplicasFunc = sink.inSyncReplicasMetrics
+	sink.LeaderTopicPartitionFunc = sink.leaderTopicPartitionMetrics
+	sink.LeaderIsPreferredTopicParitionFunc = sink.leaderIsPreferredTopicPartitionMetrics
+	sink.UnderReplicatedTopicPartitionFunc = sink.underReplicatedTopicPartitionMetrics
+
+	sink.Run()
 
 	return sink, nil
 }

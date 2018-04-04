@@ -1,125 +1,79 @@
 package log
 
 import (
-	"sync"
-
 	"github.com/Sirupsen/logrus"
 	"github.com/ryarnyah/kafka-offset/pkg/metrics"
+	"github.com/ryarnyah/kafka-offset/pkg/sinks/common"
 )
 
 // Sink default sink use logrus to print metrics
 type Sink struct {
-	offsetChan    chan []metrics.KafkaOffsetMetric
-	groupChan     chan []metrics.KafkaConsumerGroupOffsetMetric
-	topicRateChan chan []metrics.KafkaTopicRateMetric
-	groupRateChan chan []metrics.KafkaConsumerGroupRateMetric
-	stopCh        chan interface{}
-
-	wg sync.WaitGroup
+	*common.Sink
 }
 
 func init() {
 	metrics.RegisterSink("log", NewSink)
 }
 
-// GetOffsetMetricsChan print topic/partition metric
-func (s *Sink) GetOffsetMetricsChan() chan<- []metrics.KafkaOffsetMetric {
-	return s.offsetChan
+func (s *Sink) offsetMetrics(metrics []metrics.KafkaOffsetMetric) error {
+	logrus.Infof("offsetMetrics %+v", metrics)
+	return nil
 }
-
-// GetConsumerGroupOffsetMetricsChan print group/topic/partition metric
-func (s *Sink) GetConsumerGroupOffsetMetricsChan() chan<- []metrics.KafkaConsumerGroupOffsetMetric {
-	return s.groupChan
+func (s *Sink) consumerGroupOffsetMetrics(metrics []metrics.KafkaConsumerGroupOffsetMetric) error {
+	logrus.Infof("consumerGroupOffsetMetrics %+v", metrics)
+	return nil
 }
-
-// GetTopicRateMetricsChan return chan
-func (s *Sink) GetTopicRateMetricsChan() chan<- []metrics.KafkaTopicRateMetric {
-	return s.topicRateChan
+func (s *Sink) topicRateMetrics(metrics []metrics.KafkaTopicRateMetric) error {
+	logrus.Infof("topicRateMetrics %+v", metrics)
+	return nil
 }
-
-// GetConsumerGroupRateMetricsChan return chan
-func (s *Sink) GetConsumerGroupRateMetricsChan() chan<- []metrics.KafkaConsumerGroupRateMetric {
-	return s.groupRateChan
+func (s *Sink) consumerGroupRateMetrics(metrics []metrics.KafkaConsumerGroupRateMetric) error {
+	logrus.Infof("consumerGroupRateMetrics %+v", metrics)
+	return nil
 }
-
-// Close do nothing
-func (s *Sink) Close() error {
-	close(s.stopCh)
-	s.wg.Wait()
-	close(s.offsetChan)
-	close(s.groupChan)
-	close(s.topicRateChan)
-	close(s.groupRateChan)
+func (s *Sink) topicPartitionMetrics(metrics []metrics.KafkaTopicPartitions) error {
+	logrus.Infof("topicPartitionMetrics %+v", metrics)
+	return nil
+}
+func (s *Sink) replicasTopicPartitionMetrics(metrics []metrics.KafkaReplicasTopicPartition) error {
+	logrus.Infof("replicasTopicPartitionMetrics %+v", metrics)
+	return nil
+}
+func (s *Sink) inSyncReplicasMetrics(metrics []metrics.KafkaInSyncReplicas) error {
+	logrus.Infof("inSyncReplicasMetrics %+v", metrics)
+	return nil
+}
+func (s *Sink) leaderTopicPartitionMetrics(metrics []metrics.KafkaLeaderTopicPartition) error {
+	logrus.Infof("leaderTopicPartitionMetrics %+v", metrics)
+	return nil
+}
+func (s *Sink) leaderIsPreferredTopicPartitionMetrics(metrics []metrics.KafkaLeaderIsPreferredTopicPartition) error {
+	logrus.Infof("leaderIsPreferredTopicPartitionMetrics %+v", metrics)
+	return nil
+}
+func (s *Sink) underReplicatedTopicPartitionMetrics(metrics []metrics.KafkaUnderReplicatedTopicPartition) error {
+	logrus.Infof("underReplicatedTopicPartitionMetrics %+v", metrics)
 	return nil
 }
 
 // NewSink build sink
 func NewSink() (metrics.Sink, error) {
-	offsetChan := make(chan []metrics.KafkaOffsetMetric, 1024)
-	groupChan := make(chan []metrics.KafkaConsumerGroupOffsetMetric, 1024)
-	topicRateChan := make(chan []metrics.KafkaTopicRateMetric, 1024)
-	groupRateChan := make(chan []metrics.KafkaConsumerGroupRateMetric, 1024)
-	stopCh := make(chan interface{})
-
 	sink := &Sink{
-		offsetChan:    offsetChan,
-		groupChan:     groupChan,
-		topicRateChan: topicRateChan,
-		groupRateChan: groupRateChan,
-		stopCh:        stopCh,
+		Sink: common.NewCommonSink(),
 	}
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.groupChan:
-				logrus.Infof("ConsumerGroupOffsetMetrics %+v", metrics)
-			case <-s.stopCh:
-				logrus.Info("ConsumerGroupOffsetMetrics Stoped")
-				return
-			}
-		}
-	}(sink)
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.offsetChan:
-				logrus.Infof("OffsetMetrics %+v", metrics)
-			case <-s.stopCh:
-				logrus.Info("OffsetMetrics Stoped")
-				return
-			}
-		}
-	}(sink)
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.groupRateChan:
-				logrus.Infof("GroupRateChan %+v", metrics)
-			case <-s.stopCh:
-				logrus.Info("GroupRateChan Stoped")
-				return
-			}
-		}
-	}(sink)
-	sink.wg.Add(1)
-	go func(s *Sink) {
-		defer s.wg.Done()
-		for {
-			select {
-			case metrics := <-s.topicRateChan:
-				logrus.Infof("TopicRateChan %+v", metrics)
-			case <-s.stopCh:
-				logrus.Info("TopicRateChan Stoped")
-				return
-			}
-		}
-	}(sink)
+
+	sink.OffsetFunc = sink.offsetMetrics
+	sink.GroupFunc = sink.consumerGroupOffsetMetrics
+	sink.TopicRateFunc = sink.topicRateMetrics
+	sink.GroupRateFunc = sink.consumerGroupRateMetrics
+	sink.TopicPartitionFunc = sink.topicPartitionMetrics
+	sink.ReplicasTopicPartitionFunc = sink.replicasTopicPartitionMetrics
+	sink.InsyncReplicasFunc = sink.inSyncReplicasMetrics
+	sink.LeaderTopicPartitionFunc = sink.leaderTopicPartitionMetrics
+	sink.LeaderIsPreferredTopicParitionFunc = sink.leaderIsPreferredTopicPartitionMetrics
+	sink.UnderReplicatedTopicPartitionFunc = sink.underReplicatedTopicPartitionMetrics
+
+	sink.Run()
 
 	return sink, nil
 }

@@ -1,49 +1,53 @@
 package elasticsearch
 
-import "time"
+import "github.com/ryarnyah/kafka-offset/pkg/metrics"
 
-// OffsetMetric metric for topic/partition with oldest and newest offset
-type OffsetMetric struct {
-	Name         string    `json:"name,omitempty"`
-	Timestamp    time.Time `json:"timestamp,omitempty"`
-	Topic        string    `json:"topic,omitempty"`
-	Partition    int32     `json:"partition,omitempty"`
-	OldestOffset int64     `json:"oldest_offset,omitempty"`
-	NewestOffset int64     `json:"newest_offset,omitempty"`
+type offsetMetric struct {
+	Name string `json:"name,omitempty"`
+	*metrics.KafkaOffsetMetric
 }
 
-// ConsumerGroupOffsetMetric metric for consumer group
-type ConsumerGroupOffsetMetric struct {
-	Name      string    `json:"name,omitempty"`
-	Timestamp time.Time `json:"timestamp,omitempty"`
-	Group     string    `json:"group,omitempty"`
-	Topic     string    `json:"topic,omitempty"`
-	Partition int32     `json:"partition,omitempty"`
-	Offset    int64     `json:"offset,omitempty"`
-	Lag       int64     `json:"lag,omitempty"`
+type consumerGroupOffsetMetric struct {
+	Name string `json:"name,omitempty"`
+	*metrics.KafkaConsumerGroupOffsetMetric
 }
 
-// TopicRateMetric rate topic writes per seconds
-type TopicRateMetric struct {
-	Name      string    `json:"name,omitempty"`
-	Timestamp time.Time `json:"timestamp,omitempty"`
-	Topic     string    `json:"topic,omitempty"`
-	Rate1     float64   `json:"rate1,omitempty"`
-	Rate5     float64   `json:"rate5,omitempty"`
-	Rate15    float64   `json:"rate15,omitempty"`
-	RateMean  float64   `json:"rate_mean,omitempty"`
-	Count     int64     `json:"count,omitempty"`
+type topicRateMetric struct {
+	Name string `json:"name,omitempty"`
+	*metrics.KafkaTopicRateMetric
 }
 
-// ConsumerGroupRateMetric rate consumer group read/commit per seconds
-type ConsumerGroupRateMetric struct {
-	Name      string    `json:"name,omitempty"`
-	Timestamp time.Time `json:"timestamp,omitempty"`
-	Group     string    `json:"group,omitempty"`
-	Topic     string    `json:"topic,omitempty"`
-	Rate1     float64   `json:"rate1,omitempty"`
-	Rate5     float64   `json:"rate5,omitempty"`
-	Rate15    float64   `json:"rate15,omitempty"`
-	RateMean  float64   `json:"rate_mean,omitempty"`
-	Count     int64     `json:"count,omitempty"`
+type consumerGroupRateMetric struct {
+	Name string `json:"name,omitempty"`
+	*metrics.KafkaConsumerGroupRateMetric
+}
+
+type topicPartitions struct {
+	Name string `json:"name,omitempty"`
+	*metrics.KafkaTopicPartitions
+}
+
+type replicasTopicPartition struct {
+	Name string `json:"name,omitempty"`
+	*metrics.KafkaReplicasTopicPartition
+}
+
+type inSyncReplicas struct {
+	Name string `json:"name,omitempty"`
+	*metrics.KafkaInSyncReplicas
+}
+
+type leaderTopicPartition struct {
+	Name string `json:"name,omitempty"`
+	*metrics.KafkaLeaderTopicPartition
+}
+
+type leaderIsPreferredTopicPartition struct {
+	Name string `json:"name,omitempty"`
+	*metrics.KafkaLeaderIsPreferredTopicPartition
+}
+
+type underReplicatedTopicPartition struct {
+	Name string `json:"name,omitempty"`
+	*metrics.KafkaUnderReplicatedTopicPartition
 }

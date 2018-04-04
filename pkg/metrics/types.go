@@ -48,7 +48,7 @@ type KafkaConsumerGroupRateMetric struct {
 type KafkaTopicPartitions struct {
 	Timestamp       time.Time `json:"timestamp,omitempty"`
 	Topic           string    `json:"topic,omitempty"`
-	PartitionNumber int32     `json:"partition_number,omitempty"`
+	PartitionNumber int       `json:"partition_number,omitempty"`
 }
 
 // KafkaInSyncReplicas Number of In-Sync Replicas for this Topic/Partition
@@ -56,7 +56,7 @@ type KafkaInSyncReplicas struct {
 	Timestamp      time.Time `json:"timestamp,omitempty"`
 	Topic          string    `json:"topic,omitempty"`
 	Partition      int32     `json:"partition,omitempty"`
-	InSyncReplicas int32     `json:"in_sync_replicas,omitempty"`
+	InSyncReplicas int       `json:"in_sync_replicas,omitempty"`
 }
 
 // KafkaLeaderTopicPartition Leader Broker ID of this Topic/Partition
@@ -80,7 +80,7 @@ type KafkaReplicasTopicPartition struct {
 	Timestamp time.Time `json:"timestamp,omitempty"`
 	Topic     string    `json:"topic,omitempty"`
 	Partition int32     `json:"partition,omitempty"`
-	Replicas  int32     `json:"replicas,omitempty"`
+	Replicas  int       `json:"replicas,omitempty"`
 }
 
 // KafkaUnderReplicatedTopicPartition 1 if Topic/Partition is under Replicated
