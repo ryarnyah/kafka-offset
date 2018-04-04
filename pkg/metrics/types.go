@@ -43,3 +43,50 @@ type KafkaConsumerGroupRateMetric struct {
 	RateMean  float64   `json:"rate_mean,omitempty"`
 	Count     int64     `json:"count,omitempty"`
 }
+
+// KafkaTopicPartitions Number of partitions for this Topic
+type KafkaTopicPartitions struct {
+	Timestamp       time.Time `json:"timestamp,omitempty"`
+	Topic           string    `json:"topic,omitempty"`
+	PartitionNumber int32     `json:"partition_number,omitempty"`
+}
+
+// KafkaInSyncReplicas Number of In-Sync Replicas for this Topic/Partition
+type KafkaInSyncReplicas struct {
+	Timestamp      time.Time `json:"timestamp,omitempty"`
+	Topic          string    `json:"topic,omitempty"`
+	Partition      int32     `json:"partition,omitempty"`
+	InSyncReplicas int32     `json:"in_sync_replicas,omitempty"`
+}
+
+// KafkaLeaderTopicPartition Leader Broker ID of this Topic/Partition
+type KafkaLeaderTopicPartition struct {
+	Timestamp time.Time `json:"timestamp,omitempty"`
+	Topic     string    `json:"topic,omitempty"`
+	Partition int32     `json:"partition,omitempty"`
+	NodeID    int32     `json:"node_id,omitempty"`
+}
+
+// KafkaLeaderIsPreferredTopicPartition true if Topic/Partition is using the Preferred Broker
+type KafkaLeaderIsPreferredTopicPartition struct {
+	Timestamp   time.Time `json:"timestamp,omitempty"`
+	Topic       string    `json:"topic,omitempty"`
+	Partition   int32     `json:"partition,omitempty"`
+	IsPreferred bool      `json:"is_preferred,omitempty"`
+}
+
+// KafkaReplicasTopicPartition Number of Replicas for this Topic/Partition
+type KafkaReplicasTopicPartition struct {
+	Timestamp time.Time `json:"timestamp,omitempty"`
+	Topic     string    `json:"topic,omitempty"`
+	Partition int32     `json:"partition,omitempty"`
+	Replicas  int32     `json:"replicas,omitempty"`
+}
+
+// KafkaUnderReplicatedTopicPartition 1 if Topic/Partition is under Replicated
+type KafkaUnderReplicatedTopicPartition struct {
+	Timestamp         time.Time `json:"timestamp,omitempty"`
+	Topic             string    `json:"topic,omitempty"`
+	Partition         int32     `json:"partition,omitempty"`
+	IsUnderReplicated bool      `json:"is_under_replicated,omitempty"`
+}

@@ -22,23 +22,23 @@ func init() {
 	metrics.RegisterSink("log", NewSink)
 }
 
-// SendOffsetMetrics print topic/partition metric
-func (s *Sink) SendOffsetMetrics() chan<- []metrics.KafkaOffsetMetric {
+// GetOffsetMetricsChan print topic/partition metric
+func (s *Sink) GetOffsetMetricsChan() chan<- []metrics.KafkaOffsetMetric {
 	return s.offsetChan
 }
 
-// SendConsumerGroupOffsetMetrics print group/topic/partition metric
-func (s *Sink) SendConsumerGroupOffsetMetrics() chan<- []metrics.KafkaConsumerGroupOffsetMetric {
+// GetConsumerGroupOffsetMetricsChan print group/topic/partition metric
+func (s *Sink) GetConsumerGroupOffsetMetricsChan() chan<- []metrics.KafkaConsumerGroupOffsetMetric {
 	return s.groupChan
 }
 
-// SendTopicRateMetrics return chan
-func (s *Sink) SendTopicRateMetrics() chan<- []metrics.KafkaTopicRateMetric {
+// GetTopicRateMetricsChan return chan
+func (s *Sink) GetTopicRateMetricsChan() chan<- []metrics.KafkaTopicRateMetric {
 	return s.topicRateChan
 }
 
-// SendConsumerGroupRateMetrics return chan
-func (s *Sink) SendConsumerGroupRateMetrics() chan<- []metrics.KafkaConsumerGroupRateMetric {
+// GetConsumerGroupRateMetricsChan return chan
+func (s *Sink) GetConsumerGroupRateMetricsChan() chan<- []metrics.KafkaConsumerGroupRateMetric {
 	return s.groupRateChan
 }
 
@@ -51,10 +51,6 @@ func (s *Sink) Close() error {
 	close(s.topicRateChan)
 	close(s.groupRateChan)
 	return nil
-}
-
-// Wait do nothing
-func (s *Sink) Wait() {
 }
 
 // NewSink build sink

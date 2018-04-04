@@ -80,5 +80,4 @@ func main() {
 	// Wait until cleanup
 	wg.Wait()
 	s.Wait()
-	sink.Wait()
 }

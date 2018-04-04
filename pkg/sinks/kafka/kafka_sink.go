@@ -42,23 +42,23 @@ var (
 	kafkaSinkTopic    = flag.String("kafka-sink-topic", "metrics", "Kafka topic to send metrics")
 )
 
-// SendOffsetMetrics return offset channel
-func (sink *Sink) SendOffsetMetrics() chan<- []metrics.KafkaOffsetMetric {
+// GetOffsetMetricsChan return offset channel
+func (sink *Sink) GetOffsetMetricsChan() chan<- []metrics.KafkaOffsetMetric {
 	return sink.offsetChan
 }
 
-// SendConsumerGroupOffsetMetrics return consumer group offset channel
-func (sink *Sink) SendConsumerGroupOffsetMetrics() chan<- []metrics.KafkaConsumerGroupOffsetMetric {
+// GetConsumerGroupOffsetMetricsChan return consumer group offset channel
+func (sink *Sink) GetConsumerGroupOffsetMetricsChan() chan<- []metrics.KafkaConsumerGroupOffsetMetric {
 	return sink.groupChan
 }
 
-// SendTopicRateMetrics return topic rate offset channel
-func (sink *Sink) SendTopicRateMetrics() chan<- []metrics.KafkaTopicRateMetric {
+// GetTopicRateMetricsChan return topic rate offset channel
+func (sink *Sink) GetTopicRateMetricsChan() chan<- []metrics.KafkaTopicRateMetric {
 	return sink.topicRateChan
 }
 
-// SendConsumerGroupRateMetrics return consumer group rate offset channel
-func (sink *Sink) SendConsumerGroupRateMetrics() chan<- []metrics.KafkaConsumerGroupRateMetric {
+// GetConsumerGroupRateMetricsChan return consumer group rate offset channel
+func (sink *Sink) GetConsumerGroupRateMetricsChan() chan<- []metrics.KafkaConsumerGroupRateMetric {
 	return sink.groupRateChan
 }
 
@@ -75,11 +75,6 @@ func (sink *Sink) Close() error {
 		return err
 	}
 	return nil
-}
-
-// Wait sync.Waitgroup until close
-func (sink *Sink) Wait() {
-
 }
 
 func (sink *Sink) run() {

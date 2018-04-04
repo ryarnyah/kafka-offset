@@ -156,7 +156,7 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 		// Update topic producer rate
 		s.markTopicOffset(topic, lastOffsets[topic])
 	}
-	s.sink.SendOffsetMetrics() <- offsetMetrics
+	s.sink.GetOffsetMetricsChan() <- offsetMetrics
 
 	return lastOffsets, nil
 }
@@ -257,7 +257,7 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 			s.markConsumerGroupOffset(group, topic, lastGroupOffset)
 		}
 	}
-	s.sink.SendConsumerGroupOffsetMetrics() <- consumerGroupMetrics
+	s.sink.GetConsumerGroupOffsetMetricsChan() <- consumerGroupMetrics
 
 	return nil
 }
@@ -317,8 +317,8 @@ func (s *KafkaSource) fetchMetrics() error {
 			})
 		}
 	}
-	s.sink.SendTopicRateMetrics() <- topicRateSnap
-	s.sink.SendConsumerGroupRateMetrics() <- consumerGroupRateSnap
+	s.sink.GetTopicRateMetricsChan() <- topicRateSnap
+	s.sink.GetConsumerGroupRateMetricsChan() <- consumerGroupRateSnap
 	return nil
 }
 

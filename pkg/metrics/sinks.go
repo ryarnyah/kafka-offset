@@ -8,13 +8,11 @@ var registeredSinks = map[string](SinkFunc){}
 
 // Sink reprensent sink for kafka metrics
 type Sink interface {
-	SendOffsetMetrics() chan<- []KafkaOffsetMetric
-	SendConsumerGroupOffsetMetrics() chan<- []KafkaConsumerGroupOffsetMetric
-	SendTopicRateMetrics() chan<- []KafkaTopicRateMetric
-	SendConsumerGroupRateMetrics() chan<- []KafkaConsumerGroupRateMetric
+	GetOffsetMetricsChan() chan<- []KafkaOffsetMetric
+	GetConsumerGroupOffsetMetricsChan() chan<- []KafkaConsumerGroupOffsetMetric
+	GetTopicRateMetricsChan() chan<- []KafkaTopicRateMetric
+	GetConsumerGroupRateMetricsChan() chan<- []KafkaConsumerGroupRateMetric
 	Close() error
-	// sync.Waitgroup until close
-	Wait()
 }
 
 // SinkFunc build new KafkaSink
