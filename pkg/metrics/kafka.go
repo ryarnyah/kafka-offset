@@ -34,14 +34,15 @@ type KafkaSource struct {
 }
 
 var (
-	brokers        = flag.String("source-brokers", "localhost:9092", "Kafka source brokers")
-	cacerts        = flag.String("source-ssl-cacerts", "", "Kafka SSL cacerts")
-	cert           = flag.String("source-ssl-cert", "", "Kafka SSL cert")
-	key            = flag.String("source-ssl-key", "", "Kafka SSL key")
-	insecure       = flag.Bool("source-ssl-insecure", false, "Kafka insecure ssl connection")
-	username       = flag.String("source-sasl-username", os.Getenv("SOURCE_KAFKA_USERNAME"), "Kafka SASL username")
-	password       = flag.String("source-sasl-password", os.Getenv("SOURCE_KAFKA_PASSWORD"), "Kafka SASL password")
-	scrapeInterval = flag.Duration("source-scrape-interval", 60*time.Second, "Time beetween scrape kafka metrics")
+	sourceBrokers        = flag.String("source-brokers", "localhost:9092", "Kafka source brokers")
+	sourceKafkaVersion   = flag.String("source-kafka-version", sarama.V0_10_2_0.String(), "Kafka source broker version")
+	sourceCacerts        = flag.String("source-ssl-cacerts", "", "Kafka SSL cacerts")
+	sourceCert           = flag.String("source-ssl-cert", "", "Kafka SSL cert")
+	sourceKey            = flag.String("source-ssl-key", "", "Kafka SSL key")
+	sourceInsecure       = flag.Bool("source-ssl-insecure", false, "Kafka insecure ssl connection")
+	sourceUsername       = flag.String("source-sasl-username", os.Getenv("SOURCE_KAFKA_USERNAME"), "Kafka SASL username")
+	sourcePassword       = flag.String("source-sasl-password", os.Getenv("SOURCE_KAFKA_PASSWORD"), "Kafka SASL password")
+	sourceScrapeInterval = flag.Duration("source-scrape-interval", 60*time.Second, "Time beetween scrape kafka metrics")
 )
 
 func init() {
@@ -55,16 +56,20 @@ func NewKafkaSource(sink Sink) (*KafkaSource, error) {
 	}
 
 	var err error
-	sarama.Logger = logrus.StandardLogger()
-	cfg := sarama.NewConfig()
-	cfg.ClientID = "kafka-offset"
-	cfg.Version = sarama.V0_10_0_0
-	cfg.Net.TLS.Config, cfg.Net.TLS.Enable, err = util.GetTLSConfiguration(*cacerts, *cert, *key, *insecure)
+	version, err := sarama.ParseKafkaVersion(*sourceKafkaVersion)
 	if err != nil {
 		return nil, err
 	}
-	cfg.Net.SASL.User, cfg.Net.SASL.Password, cfg.Net.SASL.Enable = util.GetSASLConfiguration(*username, *password)
-	brokerList := strings.Split(*brokers, ",")
+	sarama.Logger = logrus.StandardLogger()
+	cfg := sarama.NewConfig()
+	cfg.ClientID = "kafka-offset"
+	cfg.Version = version
+	cfg.Net.TLS.Config, cfg.Net.TLS.Enable, err = util.GetTLSConfiguration(*sourceCacerts, *sourceCert, *sourceKey, *sourceInsecure)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Net.SASL.User, cfg.Net.SASL.Password, cfg.Net.SASL.Enable = util.GetSASLConfiguration(*sourceUsername, *sourcePassword)
+	brokerList := strings.Split(*sourceBrokers, ",")
 
 	client, err := sarama.NewClient(brokerList, cfg)
 	if err != nil {
@@ -93,7 +98,7 @@ func (s *KafkaSource) Run() chan interface{} {
 	s.Add(1)
 	go func() {
 		defer s.Done()
-		intervalTicker := time.NewTicker(*scrapeInterval)
+		intervalTicker := time.NewTicker(*sourceScrapeInterval)
 		for {
 			select {
 			case <-intervalTicker.C:
@@ -115,6 +120,8 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 	if err != nil {
 		return nil, err
 	}
+
+	var topicPartitionsMetric []KafkaTopicPartitions
 	// Get all topics/partitions
 	for _, topic := range topics {
 		partitions, err := s.client.Partitions(topic)
@@ -122,7 +129,18 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 			return nil, err
 		}
 		topicPartitions[topic] = partitions
+		topicPartitionsMetric = append(topicPartitionsMetric, KafkaTopicPartitions{
+			Timestamp:       start,
+			Topic:           topic,
+			PartitionNumber: len(partitions),
+		})
 	}
+
+	var replicasTopicPartitionMetrics []KafkaReplicasTopicPartition
+	var inSyncReplicasMetrics []KafkaInSyncReplicas
+	var leaderTopicPartitionMetrics []KafkaLeaderTopicPartition
+	var leaderIsPreferredTopicPartitionMetrics []KafkaLeaderIsPreferredTopicPartition
+	var underReplicatedTopicPartitionMetrics []KafkaUnderReplicatedTopicPartition
 
 	lastOffsets := make(map[string]map[int32]int64)
 	offsetMetrics := make([]KafkaOffsetMetric, 0)
@@ -140,7 +158,6 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 				return nil, err
 			}
 			offsetMetrics = append(offsetMetrics, KafkaOffsetMetric{
-				Name:         "kafka-topic-offset-metric",
 				Timestamp:    start,
 				Topic:        topic,
 				Partition:    partition,
@@ -153,11 +170,63 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 				lastOffsetsParition = lastOffsets[topic]
 			}
 			lastOffsetsParition[partition] = newestOffset
+
+			leader, err := s.client.Leader(topic, partition)
+			if err != nil {
+				return nil, err
+			}
+			if leader != nil {
+				leaderTopicPartitionMetrics = append(leaderTopicPartitionMetrics, KafkaLeaderTopicPartition{
+					Timestamp: start,
+					Topic:     topic,
+					Partition: partition,
+					NodeID:    leader.ID(),
+				})
+			}
+
+			replicas, err := s.client.Replicas(topic, partition)
+			if err != nil {
+				return nil, err
+			}
+			replicasTopicPartitionMetrics = append(replicasTopicPartitionMetrics, KafkaReplicasTopicPartition{
+				Timestamp: start,
+				Topic:     topic,
+				Partition: partition,
+				Replicas:  len(replicas),
+			})
+			inSyncReplicas, err := s.client.InSyncReplicas(topic, partition)
+			if err != nil {
+				return nil, err
+			}
+			inSyncReplicasMetrics = append(inSyncReplicasMetrics, KafkaInSyncReplicas{
+				Timestamp:      start,
+				Topic:          topic,
+				Partition:      partition,
+				InSyncReplicas: len(inSyncReplicas),
+			})
+			leaderIsPreferredTopicPartitionMetrics = append(leaderIsPreferredTopicPartitionMetrics, KafkaLeaderIsPreferredTopicPartition{
+				Timestamp:   start,
+				Topic:       topic,
+				Partition:   partition,
+				IsPreferred: (leader != nil && replicas != nil && len(replicas) > 0 && leader.ID() == replicas[0]),
+			})
+			underReplicatedTopicPartitionMetrics = append(underReplicatedTopicPartitionMetrics, KafkaUnderReplicatedTopicPartition{
+				Timestamp:         start,
+				Topic:             topic,
+				Partition:         partition,
+				IsUnderReplicated: (replicas != nil && inSyncReplicas != nil && len(inSyncReplicas) < len(replicas)),
+			})
 		}
 		// Update topic producer rate
 		s.markTopicOffset(topic, lastOffsets[topic])
 	}
-	s.sink.SendOffsetMetrics() <- offsetMetrics
+	s.sink.GetTopicPartitionChan() <- topicPartitionsMetric
+	s.sink.GetReplicasTopicPartitionChan() <- replicasTopicPartitionMetrics
+	s.sink.GetInSyncReplicasChan() <- inSyncReplicasMetrics
+	s.sink.GetOffsetMetricsChan() <- offsetMetrics
+	s.sink.GetLeaderTopicPartitionChan() <- leaderTopicPartitionMetrics
+	s.sink.GetLeaderisPreferredTopicPartitionChan() <- leaderIsPreferredTopicPartitionMetrics
+	s.sink.GetUnderReplicatedTopicPartitionChan() <- underReplicatedTopicPartitionMetrics
 
 	return lastOffsets, nil
 }
@@ -245,7 +314,6 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 				}
 
 				consumerGroupMetrics = append(consumerGroupMetrics, KafkaConsumerGroupOffsetMetric{
-					Name:      "kafka-consumer-group-metric",
 					Timestamp: start,
 					Group:     group,
 					Topic:     topic,
@@ -259,7 +327,7 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 			s.markConsumerGroupOffset(group, topic, lastGroupOffset)
 		}
 	}
-	s.sink.SendConsumerGroupOffsetMetrics() <- consumerGroupMetrics
+	s.sink.GetConsumerGroupOffsetMetricsChan() <- consumerGroupMetrics
 
 	return nil
 }
@@ -294,7 +362,6 @@ func (s *KafkaSource) fetchMetrics() error {
 	topicRateSnap := make([]KafkaTopicRateMetric, 0)
 	for topic, meter := range s.topicOffsetMeter {
 		topicRateSnap = append(topicRateSnap, KafkaTopicRateMetric{
-			Name:      "kafka-topic-rate-metric",
 			Timestamp: now,
 			Topic:     topic,
 			Rate1:     meter.Rate1(),
@@ -309,7 +376,6 @@ func (s *KafkaSource) fetchMetrics() error {
 	for group, topics := range s.consumerGroupOffsetMeter {
 		for topic, meter := range topics {
 			consumerGroupRateSnap = append(consumerGroupRateSnap, KafkaConsumerGroupRateMetric{
-				Name:      "kafka-consumer-group-rate-metric",
 				Timestamp: now,
 				Group:     group,
 				Topic:     topic,
@@ -321,8 +387,8 @@ func (s *KafkaSource) fetchMetrics() error {
 			})
 		}
 	}
-	s.sink.SendTopicRateMetrics() <- topicRateSnap
-	s.sink.SendConsumerGroupRateMetrics() <- consumerGroupRateSnap
+	s.sink.GetTopicRateMetricsChan() <- topicRateSnap
+	s.sink.GetConsumerGroupRateMetricsChan() <- consumerGroupRateSnap
 	return nil
 }
 

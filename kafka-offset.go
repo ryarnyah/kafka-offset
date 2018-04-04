@@ -13,6 +13,8 @@ import (
 
 var (
 	sinkName = flag.String("sink", "log", "Sink to use (log, kafka, elasticsearch)")
+	profile  = flag.String("profile", "prod", "Profile to apply to log")
+	logLevel = flag.String("log-level", "info", "Log level")
 )
 
 func installSignalHandler(stopChs ...chan interface{}) *sync.WaitGroup {
@@ -35,6 +37,17 @@ func installSignalHandler(stopChs ...chan interface{}) *sync.WaitGroup {
 
 func main() {
 	flag.Parse()
+
+	if *profile == "prod" {
+		logrus.SetFormatter(&logrus.JSONFormatter{})
+	}
+
+	level, err := logrus.ParseLevel(*logLevel)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	logrus.SetLevel(level)
 
 	sink, err := metrics.New(*sinkName)
 	if err != nil {
@@ -67,5 +80,4 @@ func main() {
 	// Wait until cleanup
 	wg.Wait()
 	s.Wait()
-	sink.Wait()
 }
