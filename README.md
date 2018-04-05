@@ -56,10 +56,20 @@ Usage of ./kafka-offset:
     	Kafka SSL key
   -kafka-sink-topic string
     	Kafka topic to send metrics (default "metrics")
+  -kafka-sink-version string
+    	Kafka sink broker version (default "0.10.2.0")
+  -log-level string
+    	Log level (default "info")
+  -profile string
+    	Profile to apply to log (default "prod")
   -sink string
     	Sink to use (log, kafka, elasticsearch) (default "log")
+  -sink-produce-interval duration
+    	Time beetween metrics production (default 1m0s)
   -source-brokers string
     	Kafka source brokers (default "localhost:9092")
+  -source-kafka-version string
+    	Kafka source broker version (default "0.10.2.0")
   -source-sasl-password string
     	Kafka SASL password
   -source-sasl-username string
