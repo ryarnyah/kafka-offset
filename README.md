@@ -86,6 +86,22 @@ Usage of ./kafka-offset:
     	Kafka SSL key
 ```
 
+### Supported metrics
+| Name                                               | Exposed informations                                |
+| -------------------------------------------------- | --------------------------------------------------- |
+| `kafka_topic_partition`                            | Number of partitions for this Topic                 |
+| `kafka_topic_partition_offset_newest`              | Newest offset for this Topic/Partition              |
+| `kafka_topic_partition_offset_oldest`              | Oldest offset for this Topic/Partition              |
+| `kafka_leader_topic_partition`                     | NodeID leader for this Topic/Partition              |
+| `kafka_replicas_topic_partition`                   | Number of replicas for this Topic/Partition         |
+| `kafka_in_sync_replicas`                           | Number of In-Sync Replicas for this Topic/Partition |
+| `kafka_leader_is_preferred_topic_partition`        | 1 if Topic/Partition is using the Preferred Broker  |
+| `kafka_under_replicated_topic_partition`           | 1 if Topic/Partition is under Replicated            |
+| `kafka_consumer_group_lag`                         | Lag for this Consumer group / Topic                 |
+| `kafka_consumer_group_latest_offset`               | Latest offset for this Consumer group               |
+| `kafka_topic_rate`                                 | Rate of Topic production                            |
+| `kafka_consumer_group_rate`                        | Rate of this Consumer group consumer on this Topic  |
+
 ## About
 
 ### Supported Sinks

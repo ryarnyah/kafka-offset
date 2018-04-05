@@ -189,8 +189,8 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 				return nil, err
 			}
 			if leader != nil {
-				leaderTopicPartitionMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_topic_partition_metric_%s_%d", topic, partition),
-					NewKafkaGauge("kafka_topic_partition_metric", map[string]interface{}{
+				leaderTopicPartitionMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_leader_topic_partition_%s_%d", topic, partition),
+					NewKafkaGauge("kafka_leader_topic_partition", map[string]interface{}{
 						"topic":     topic,
 						"partition": partition,
 						"timestamp": start,
