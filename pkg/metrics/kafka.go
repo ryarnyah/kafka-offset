@@ -24,8 +24,7 @@ type KafkaSource struct {
 	mutex  sync.Mutex
 	sink   Sink
 
-	topicOffsetMeter         map[string]metrics.Meter
-	consumerGroupOffsetMeter map[string]map[string]metrics.Meter
+	kafkaRegistry metrics.Registry
 
 	previousTopicOffset         map[string]int64
 	previousConsumerGroupOffset map[string]int64
@@ -43,6 +42,7 @@ var (
 	sourceUsername       = flag.String("source-sasl-username", os.Getenv("SOURCE_KAFKA_USERNAME"), "Kafka SASL username")
 	sourcePassword       = flag.String("source-sasl-password", os.Getenv("SOURCE_KAFKA_PASSWORD"), "Kafka SASL password")
 	sourceScrapeInterval = flag.Duration("source-scrape-interval", 60*time.Second, "Time beetween scrape kafka metrics")
+	sinkProduceInterval  = flag.Duration("sink-produce-interval", 60*time.Second, "Time beetween metrics production")
 )
 
 func init() {
@@ -76,8 +76,6 @@ func NewKafkaSource(sink Sink) (*KafkaSource, error) {
 		return nil, err
 	}
 
-	topicOffsetMeter := make(map[string]metrics.Meter, 0)
-	consumerGroupOffsetMeter := make(map[string]map[string]metrics.Meter)
 	previousTopicOffset := make(map[string]int64)
 	previousConsumerGroupOffset := make(map[string]int64)
 
@@ -85,8 +83,7 @@ func NewKafkaSource(sink Sink) (*KafkaSource, error) {
 		client:                      client,
 		sink:                        sink,
 		cfg:                         cfg,
-		topicOffsetMeter:            topicOffsetMeter,
-		consumerGroupOffsetMeter:    consumerGroupOffsetMeter,
+		kafkaRegistry:               metrics.NewRegistry(),
 		previousTopicOffset:         previousTopicOffset,
 		previousConsumerGroupOffset: previousConsumerGroupOffset,
 	}, nil
@@ -111,6 +108,22 @@ func (s *KafkaSource) Run() chan interface{} {
 			}
 		}
 	}()
+	s.Add(1)
+	go func() {
+		defer s.Done()
+		intervalTicker := time.NewTicker(*sinkProduceInterval)
+		for {
+			select {
+			case <-intervalTicker.C:
+				err := s.produceMetrics()
+				if err != nil {
+					logrus.Error(err)
+				}
+			case <-s.stopCh:
+				return
+			}
+		}
+	}()
 	return s.stopCh
 }
 
@@ -121,7 +134,6 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 		return nil, err
 	}
 
-	var topicPartitionsMetric []KafkaTopicPartitions
 	// Get all topics/partitions
 	for _, topic := range topics {
 		partitions, err := s.client.Partitions(topic)
@@ -129,21 +141,15 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 			return nil, err
 		}
 		topicPartitions[topic] = partitions
-		topicPartitionsMetric = append(topicPartitionsMetric, KafkaTopicPartitions{
-			Timestamp:       start,
-			Topic:           topic,
-			PartitionNumber: len(partitions),
-		})
+		topicPartitionsMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_topic_partition_%s", topic),
+			NewKafkaGauge("kafka_topic_partition", map[string]interface{}{
+				"topic":     topic,
+				"timestamp": start,
+			})).(metrics.Gauge)
+		topicPartitionsMetric.Update(int64(len(partitions)))
 	}
 
-	var replicasTopicPartitionMetrics []KafkaReplicasTopicPartition
-	var inSyncReplicasMetrics []KafkaInSyncReplicas
-	var leaderTopicPartitionMetrics []KafkaLeaderTopicPartition
-	var leaderIsPreferredTopicPartitionMetrics []KafkaLeaderIsPreferredTopicPartition
-	var underReplicatedTopicPartitionMetrics []KafkaUnderReplicatedTopicPartition
-
 	lastOffsets := make(map[string]map[int32]int64)
-	offsetMetrics := make([]KafkaOffsetMetric, 0)
 	for topic, partitions := range topicPartitions {
 		for _, partition := range partitions {
 			oldestOffset, err := s.client.GetOffset(topic, partition, sarama.OffsetOldest)
@@ -157,13 +163,20 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 			if err != nil {
 				return nil, err
 			}
-			offsetMetrics = append(offsetMetrics, KafkaOffsetMetric{
-				Timestamp:    start,
-				Topic:        topic,
-				Partition:    partition,
-				NewestOffset: newestOffset,
-				OldestOffset: oldestOffset,
-			})
+			offsetNewestMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_topic_partition_offset_newest_%s_%d", topic, partition),
+				NewKafkaGauge("kafka_topic_partition_offset_newest", map[string]interface{}{
+					"topic":     topic,
+					"partition": partition,
+					"timestamp": start,
+				})).(metrics.Gauge)
+			offsetNewestMetric.Update(newestOffset)
+			offsetOldestMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_topic_partition_offset_oldest_%s_%d", topic, partition),
+				NewKafkaGauge("kafka_topic_partition_offset_oldest", map[string]interface{}{
+					"topic":     topic,
+					"partition": partition,
+					"timestamp": start,
+				})).(metrics.Gauge)
+			offsetOldestMetric.Update(oldestOffset)
 			lastOffsetsParition, ok := lastOffsets[topic]
 			if !ok {
 				lastOffsets[topic] = make(map[int32]int64)
@@ -176,57 +189,63 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 				return nil, err
 			}
 			if leader != nil {
-				leaderTopicPartitionMetrics = append(leaderTopicPartitionMetrics, KafkaLeaderTopicPartition{
-					Timestamp: start,
-					Topic:     topic,
-					Partition: partition,
-					NodeID:    leader.ID(),
-				})
+				leaderTopicPartitionMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_topic_partition_metric_%s_%d", topic, partition),
+					NewKafkaGauge("kafka_topic_partition_metric", map[string]interface{}{
+						"topic":     topic,
+						"partition": partition,
+						"timestamp": start,
+					})).(metrics.Gauge)
+				leaderTopicPartitionMetric.Update(int64(leader.ID()))
 			}
 
 			replicas, err := s.client.Replicas(topic, partition)
 			if err != nil {
 				return nil, err
 			}
-			replicasTopicPartitionMetrics = append(replicasTopicPartitionMetrics, KafkaReplicasTopicPartition{
-				Timestamp: start,
-				Topic:     topic,
-				Partition: partition,
-				Replicas:  len(replicas),
-			})
+			replicasTopicPartitionMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_replicas_topic_partition_%s_%d", topic, partition),
+				NewKafkaGauge("kafka_replicas_topic_partition", map[string]interface{}{
+					"topic":     topic,
+					"partition": partition,
+					"timestamp": start,
+				})).(metrics.Gauge)
+			replicasTopicPartitionMetric.Update(int64(len(replicas)))
 			inSyncReplicas, err := s.client.InSyncReplicas(topic, partition)
 			if err != nil {
 				return nil, err
 			}
-			inSyncReplicasMetrics = append(inSyncReplicasMetrics, KafkaInSyncReplicas{
-				Timestamp:      start,
-				Topic:          topic,
-				Partition:      partition,
-				InSyncReplicas: len(inSyncReplicas),
-			})
-			leaderIsPreferredTopicPartitionMetrics = append(leaderIsPreferredTopicPartitionMetrics, KafkaLeaderIsPreferredTopicPartition{
-				Timestamp:   start,
-				Topic:       topic,
-				Partition:   partition,
-				IsPreferred: (leader != nil && replicas != nil && len(replicas) > 0 && leader.ID() == replicas[0]),
-			})
-			underReplicatedTopicPartitionMetrics = append(underReplicatedTopicPartitionMetrics, KafkaUnderReplicatedTopicPartition{
-				Timestamp:         start,
-				Topic:             topic,
-				Partition:         partition,
-				IsUnderReplicated: (replicas != nil && inSyncReplicas != nil && len(inSyncReplicas) < len(replicas)),
-			})
+			inSyncReplicasMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_in_sync_replicas_%s_%d", topic, partition),
+				NewKafkaGauge("kafka_in_sync_replicas", map[string]interface{}{
+					"topic":     topic,
+					"partition": partition,
+					"timestamp": start,
+				})).(metrics.Gauge)
+			inSyncReplicasMetric.Update(int64(len(inSyncReplicas)))
+			leaderIsPreferredTopicPartitionMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_leader_is_preferred_topic_partition_%s_%d", topic, partition),
+				NewKafkaGauge("kafka_leader_is_preferred_topic_partition", map[string]interface{}{
+					"topic":     topic,
+					"partition": partition,
+					"timestamp": start,
+				})).(metrics.Gauge)
+			if leader != nil && replicas != nil && len(replicas) > 0 && leader.ID() == replicas[0] {
+				leaderIsPreferredTopicPartitionMetric.Update(1)
+			} else {
+				leaderIsPreferredTopicPartitionMetric.Update(0)
+			}
+			underReplicatedTopicPartitionMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_under_replicated_topic_partition_%s_%d", topic, partition),
+				NewKafkaGauge("kafka_under_replicated_topic_partition", map[string]interface{}{
+					"topic":     topic,
+					"partition": partition,
+					"timestamp": start,
+				})).(metrics.Gauge)
+			if replicas != nil && inSyncReplicas != nil && len(inSyncReplicas) < len(replicas) {
+				underReplicatedTopicPartitionMetric.Update(1)
+			} else {
+				underReplicatedTopicPartitionMetric.Update(0)
+			}
 		}
 		// Update topic producer rate
 		s.markTopicOffset(topic, lastOffsets[topic])
 	}
-	s.sink.GetTopicPartitionChan() <- topicPartitionsMetric
-	s.sink.GetReplicasTopicPartitionChan() <- replicasTopicPartitionMetrics
-	s.sink.GetInSyncReplicasChan() <- inSyncReplicasMetrics
-	s.sink.GetOffsetMetricsChan() <- offsetMetrics
-	s.sink.GetLeaderTopicPartitionChan() <- leaderTopicPartitionMetrics
-	s.sink.GetLeaderisPreferredTopicPartitionChan() <- leaderIsPreferredTopicPartitionMetrics
-	s.sink.GetUnderReplicatedTopicPartitionChan() <- underReplicatedTopicPartitionMetrics
 
 	return lastOffsets, nil
 }
@@ -284,7 +303,6 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 		}
 	}
 
-	consumerGroupMetrics := make([]KafkaConsumerGroupOffsetMetric, 0)
 	for _, group := range consumerGroups {
 		coordinator, err := s.client.Coordinator(group)
 		if err != nil {
@@ -313,21 +331,28 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 					lastOffset = lastOffsetPartitions[partition]
 				}
 
-				consumerGroupMetrics = append(consumerGroupMetrics, KafkaConsumerGroupOffsetMetric{
-					Timestamp: start,
-					Group:     group,
-					Topic:     topic,
-					Partition: partition,
-					Offset:    offset.Offset,
-					Lag:       lastOffset - offset.Offset,
-				})
+				consumerGroupLag := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_consumer_group_lag_%s_%s_%d", group, topic, partition),
+					NewKafkaGauge("kafka_consumer_group_lag", map[string]interface{}{
+						"group":     group,
+						"topic":     topic,
+						"partition": partition,
+						"timestamp": start,
+					})).(metrics.Gauge)
+				consumerGroupLag.Update(lastOffset - offset.Offset)
+				consumerGroupLastOffset := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_consumer_group_latest_offset_%s_%s_%d", group, topic, partition),
+					NewKafkaGauge("kafka_consumer_group_latest_offset", map[string]interface{}{
+						"group":     group,
+						"topic":     topic,
+						"partition": partition,
+						"timestamp": start,
+					})).(metrics.Gauge)
+				consumerGroupLastOffset.Update(offset.Offset)
 				lastGroupOffset[partition] = offset.Offset
 			}
 			// Update consumer rate
 			s.markConsumerGroupOffset(group, topic, lastGroupOffset)
 		}
 	}
-	s.sink.GetConsumerGroupOffsetMetricsChan() <- consumerGroupMetrics
 
 	return nil
 }
@@ -358,37 +383,18 @@ func (s *KafkaSource) fetchMetrics() error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
 
-	topicRateSnap := make([]KafkaTopicRateMetric, 0)
-	for topic, meter := range s.topicOffsetMeter {
-		topicRateSnap = append(topicRateSnap, KafkaTopicRateMetric{
-			Timestamp: now,
-			Topic:     topic,
-			Rate1:     meter.Rate1(),
-			Rate5:     meter.Rate5(),
-			Rate15:    meter.Rate15(),
-			RateMean:  meter.RateMean(),
-			Count:     meter.Count(),
-		})
-	}
-
-	consumerGroupRateSnap := make([]KafkaConsumerGroupRateMetric, 0)
-	for group, topics := range s.consumerGroupOffsetMeter {
-		for topic, meter := range topics {
-			consumerGroupRateSnap = append(consumerGroupRateSnap, KafkaConsumerGroupRateMetric{
-				Timestamp: now,
-				Group:     group,
-				Topic:     topic,
-				Rate1:     meter.Rate1(),
-				Rate5:     meter.Rate5(),
-				Rate15:    meter.Rate15(),
-				RateMean:  meter.RateMean(),
-				Count:     meter.Count(),
-			})
+func (s *KafkaSource) produceMetrics() error {
+	s.kafkaRegistry.Each(func(name string, metric interface{}) {
+		switch metric.(type) {
+		case metrics.Meter:
+			s.sink.GetMetricsChan() <- metric.(metrics.Meter).Snapshot()
+		case metrics.Gauge:
+			s.sink.GetMetricsChan() <- metric.(metrics.Gauge).Snapshot()
 		}
-	}
-	s.sink.GetTopicRateMetricsChan() <- topicRateSnap
-	s.sink.GetConsumerGroupRateMetricsChan() <- consumerGroupRateSnap
+	})
 	return nil
 }
 
@@ -404,15 +410,7 @@ func (s *KafkaSource) Close() error {
 		}
 	}
 
-	for _, meter := range s.topicOffsetMeter {
-		meter.Stop()
-	}
-
-	for _, topicMeter := range s.consumerGroupOffsetMeter {
-		for _, meter := range topicMeter {
-			meter.Stop()
-		}
-	}
+	s.kafkaRegistry.UnregisterAll()
 
 	return s.client.Close()
 }
@@ -427,12 +425,11 @@ func (s *KafkaSource) markTopicOffset(topic string, partitionOffsets map[int32]i
 
 	previousOffset, ok := s.previousTopicOffset[topic]
 	if ok {
-		meter, ok := s.topicOffsetMeter[topic]
-		if !ok {
-			s.topicOffsetMeter[topic] = metrics.NewMeter()
-			meter = s.topicOffsetMeter[topic]
-		}
-		meter.Mark(offset - previousOffset)
+		topicRate := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_consumer_topic_rate_%s", topic),
+			NewKafkaMeter("kafka_consumer_topic_rate", map[string]interface{}{
+				"topic": topic,
+			})).(metrics.Meter)
+		topicRate.Mark(offset - previousOffset)
 	}
 	s.previousTopicOffset[topic] = offset
 }
@@ -447,17 +444,12 @@ func (s *KafkaSource) markConsumerGroupOffset(group, topic string, partitionOffs
 
 	previousOffset, ok := s.previousConsumerGroupOffset[group+"_"+topic]
 	if ok {
-		topics, ok := s.consumerGroupOffsetMeter[group]
-		if !ok {
-			s.consumerGroupOffsetMeter[group] = make(map[string]metrics.Meter)
-			topics = s.consumerGroupOffsetMeter[group]
-		}
-		meter, ok := topics[topic]
-		if !ok {
-			topics[topic] = metrics.NewMeter()
-			meter = topics[topic]
-		}
-		meter.Mark(offset - previousOffset)
+		consumerGroupRate := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_consumer_group_rate_%s_%s", group, topic),
+			NewKafkaMeter("kafka_consumer_group_rate", map[string]interface{}{
+				"group": group,
+				"topic": topic,
+			})).(metrics.Meter)
+		consumerGroupRate.Mark(offset - previousOffset)
 	}
 	s.previousConsumerGroupOffset[group+"_"+topic] = offset
 }

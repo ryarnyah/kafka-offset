@@ -1,55 +1,21 @@
 package kafka
 
-import (
-	"github.com/ryarnyah/kafka-offset/pkg/metrics"
-)
+import "time"
 
-type offsetMetric struct {
-	Name string `json:"name,omitempty"`
-	*metrics.KafkaOffsetMetric
+type meter struct {
+	Name      string                 `json:"name"`
+	Timestamp time.Time              `json:"timestamp"`
+	Meta      map[string]interface{} `json:"meta,omitempty"`
+	Rate1     float64                `json:"rate1"`
+	Rate5     float64                `json:"rate5"`
+	Rate15    float64                `json:"rate15"`
+	RateMean  float64                `json:"rate_mean"`
+	Count     int64                  `json:"count"`
 }
 
-type consumerGroupOffsetMetric struct {
-	Name string `json:"name,omitempty"`
-	*metrics.KafkaConsumerGroupOffsetMetric
-}
-
-type topicRateMetric struct {
-	Name string `json:"name,omitempty"`
-	*metrics.KafkaTopicRateMetric
-}
-
-type consumerGroupRateMetric struct {
-	Name string `json:"name,omitempty"`
-	*metrics.KafkaConsumerGroupRateMetric
-}
-
-type topicPartitions struct {
-	Name string `json:"name,omitempty"`
-	*metrics.KafkaTopicPartitions
-}
-
-type replicasTopicPartition struct {
-	Name string `json:"name,omitempty"`
-	*metrics.KafkaReplicasTopicPartition
-}
-
-type inSyncReplicas struct {
-	Name string `json:"name,omitempty"`
-	*metrics.KafkaInSyncReplicas
-}
-
-type leaderTopicPartition struct {
-	Name string `json:"name,omitempty"`
-	*metrics.KafkaLeaderTopicPartition
-}
-
-type leaderIsPreferredTopicPartition struct {
-	Name string `json:"name,omitempty"`
-	*metrics.KafkaLeaderIsPreferredTopicPartition
-}
-
-type underReplicatedTopicPartition struct {
-	Name string `json:"name,omitempty"`
-	*metrics.KafkaUnderReplicatedTopicPartition
+type gauge struct {
+	Name      string                 `json:"name"`
+	Timestamp time.Time              `json:"timestamp"`
+	Meta      map[string]interface{} `json:"meta,omitempty"`
+	Value     int64                  `json:"value"`
 }
