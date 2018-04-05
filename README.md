@@ -6,7 +6,7 @@ Kafka metrics offset fetcher with some sinks :D
 
 #### Binaries
 
-- **linux** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.1.0/kafka-offset-linux-amd64)
+- **linux** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.2.0/kafka-offset-linux-amd64)
 
 #### Via Go
 
@@ -25,7 +25,7 @@ $ make
 
 #### Running with Docker
 ```bash
-docker run ryarnyah/kafka-offset:0.1.0 <option>
+docker run ryarnyah/kafka-offset:0.2.0 <option>
 ```
 
 ## Usage
@@ -85,7 +85,7 @@ Simple log sink with logrus
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset:0.1.0 -sink log -source-brokers localhost:9092
+docker run ryarnyah/kafka-offset:0.2.0 -sink log -source-brokers localhost:9092
 ```
 
 #### Kafka (-sink kafka)
@@ -93,7 +93,7 @@ Kafka sink export metrics as JSON format to specified topic. SASL/SSL supported.
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset:0.1.0 -sink kafka -source-brokers localhost:9092 -kafka-sink-brokers localhost:9092 -kafka-sink-topic metrics
+docker run ryarnyah/kafka-offset:0.2.0 -sink kafka -source-brokers localhost:9092 -kafka-sink-brokers localhost:9092 -kafka-sink-topic metrics
 ```
 
 #### Elasticsearch (-sink elasticsearch)
@@ -101,5 +101,5 @@ Elasticsearch V6 sink export metrics as documents to specified index. Auth suppo
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset:0.1.0 -sink elasticsearch -source-brokers localhost:9092 -elasticsearch-sink-url localhost:9200 -elasticsearch-sink-index metrics
+docker run ryarnyah/kafka-offset:0.2.0 -sink elasticsearch -source-brokers localhost:9092 -elasticsearch-sink-url localhost:9200 -elasticsearch-sink-index metrics
 ```

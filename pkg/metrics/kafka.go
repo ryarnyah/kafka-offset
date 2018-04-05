@@ -425,8 +425,8 @@ func (s *KafkaSource) markTopicOffset(topic string, partitionOffsets map[int32]i
 
 	previousOffset, ok := s.previousTopicOffset[topic]
 	if ok {
-		topicRate := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_consumer_topic_rate_%s", topic),
-			NewKafkaMeter("kafka_consumer_topic_rate", map[string]interface{}{
+		topicRate := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_topic_rate_%s", topic),
+			NewKafkaMeter("kafka_topic_rate", map[string]interface{}{
 				"topic": topic,
 			})).(metrics.Meter)
 		topicRate.Mark(offset - previousOffset)
