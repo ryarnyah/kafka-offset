@@ -1,0 +1,12 @@
+kafka_topic_partition                     value:GAUGE:0:U
+kafka_topic_partition_offset_newest       value:GAUGE:0:U
+kafka_topic_partition_offset_oldest       value:GAUGE:0:U
+kafka_leader_topic_partition              value:GAUGE:0:U
+kafka_replicas_topic_partition            value:GAUGE:0:U
+kafka_in_sync_replicas                    value:GAUGE:0:U
+kafka_leader_is_preferred_topic_partition value:GAUGE:0:U
+kafka_under_replicated_topic_partition    value:GAUGE:0:U
+kafka_consumer_group_lag                  value:GAUGE:0:U
+kafka_consumer_group_latest_offset        value:GAUGE:0:U
+kafka_topic_rate                          count:GAUGE:0:U rate1:GAUGE:0:U rate5:GAUGE:0:U rate15:GAUGE:0:U rate_mean:GAUGE:0:U
+kafka_consumer_group_rate                 count:GAUGE:0:U rate1:GAUGE:0:U rate5:GAUGE:0:U rate15:GAUGE:0:U rate_mean:GAUGE:0:U

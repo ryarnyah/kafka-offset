@@ -6,7 +6,11 @@ Kafka metrics offset fetcher with some sinks :D
 
 #### Binaries
 
-- **linux** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.2.1/kafka-offset-linux-amd64)
+- **linux** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.3.0/kafka-offset-linux-amd64)
+
+```bash
+sudo curl -L https://github.com/ryarnyah/kafka-offset/releases/download/0.3.0/kafka-offset-linux-amd64 -o /usr/local/bin/kafka-offset && sudo chmod +x /usr/local/bin/kafka-offset
+```
 
 #### Via Go
 
@@ -25,13 +29,17 @@ $ make
 
 #### Running with Docker
 ```bash
-docker run ryarnyah/kafka-offset:0.2.1 <option>
+docker run ryarnyah/kafka-offset:0.3.0 <option>
 ```
 
 ## Usage
 
 ```bash
 Usage of ./kafka-offset:
+  -collectd-hostname string
+    	Hostname for collectd plugin
+  -collectd-interval string
+    	Collectd interval
   -elasticsearch-password string
     	Elasticsearch password
   -elasticsearch-sink-index string
@@ -57,19 +65,19 @@ Usage of ./kafka-offset:
   -kafka-sink-topic string
     	Kafka topic to send metrics (default "metrics")
   -kafka-sink-version string
-    	Kafka sink broker version (default "0.10.2.1")
+    	Kafka sink broker version (default "0.10.2.0")
   -log-level string
     	Log level (default "info")
   -profile string
     	Profile to apply to log (default "prod")
   -sink string
-    	Sink to use (log, kafka, elasticsearch) (default "log")
+    	Sink to use (log, kafka, elasticsearch, collectd) (default "log")
   -sink-produce-interval duration
     	Time beetween metrics production (default 1m0s)
   -source-brokers string
     	Kafka source brokers (default "localhost:9092")
   -source-kafka-version string
-    	Kafka source broker version (default "0.10.2.1")
+    	Kafka source broker version (default "0.10.2.0")
   -source-sasl-password string
     	Kafka SASL password
   -source-sasl-username string
@@ -111,7 +119,7 @@ Simple log sink with logrus
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset:0.2.1 -sink log -source-brokers localhost:9092
+docker run ryarnyah/kafka-offset:0.3.0 -sink log -source-brokers localhost:9092
 ```
 
 #### Kafka (-sink kafka)
@@ -119,7 +127,7 @@ Kafka sink export metrics as JSON format to specified topic. SASL/SSL supported.
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset:0.2.1 -sink kafka -source-brokers localhost:9092 -kafka-sink-brokers localhost:9092 -kafka-sink-topic metrics
+docker run ryarnyah/kafka-offset:0.3.0 -sink kafka -source-brokers localhost:9092 -kafka-sink-brokers localhost:9092 -kafka-sink-topic metrics
 ```
 
 #### Elasticsearch (-sink elasticsearch)
@@ -127,5 +135,21 @@ Elasticsearch V6 sink export metrics as documents to specified index. Auth suppo
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset:0.2.1 -sink elasticsearch -source-brokers localhost:9092 -elasticsearch-sink-url localhost:9200 -elasticsearch-sink-index metrics
+docker run ryarnyah/kafka-offset:0.3.0 -sink elasticsearch -source-brokers localhost:9092 -elasticsearch-sink-url localhost:9200 -elasticsearch-sink-index metrics
+```
+
+#### Collectd (-sink collectd)
+Collectd Exec plugin sink (see deploy/collectd/types.db)
+##### Example
+```xml
+TypesDB "/opt/collectd/share/collectd/kafka/types.db.custom"
+<Plugin exec>
+	Exec nobody "/bin/sh" "-c" "/usr/local/bin/kafka-offset -sink collectd -source-brokers localhost:9092 -log-level panic -source-scrape-interval 10s -sink-produce-interval 10s"
+</Plugin>
+```
+
+##### Install collectd types
+```bash
+sudo mkdir -p /opt/collectd/share/collectd/kafka/
+sudo curl -L https://raw.githubusercontent.com/ryarnyah/kafka-offset/master/deploy/collectd/types.db -o /opt/collectd/share/collectd/kafka/types.db.custom
 ```
