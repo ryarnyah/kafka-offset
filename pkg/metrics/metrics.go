@@ -9,6 +9,7 @@ import (
 // BaseMetric base metrics for gauge and meter
 type BaseMetric struct {
 	Name      string
+	Key       string
 	Timestamp time.Time
 	Meta      map[string]interface{}
 }
@@ -26,17 +27,19 @@ func (m KafkaMeter) Snapshot() metrics.Meter {
 			Name:      m.Name,
 			Timestamp: time.Now(),
 			Meta:      m.Meta,
+			Key:       m.Key,
 		},
 		Meter: m.Meter.Snapshot(),
 	}
 }
 
 // NewKafkaMeter build a new Kafka Meter
-func NewKafkaMeter(name string, meta map[string]interface{}) KafkaMeter {
+func NewKafkaMeter(name, key string, meta map[string]interface{}) KafkaMeter {
 	return KafkaMeter{
 		BaseMetric: BaseMetric{
 			Name: name,
 			Meta: meta,
+			Key:  key,
 		},
 		Meter: metrics.NewMeter(),
 	}
@@ -55,17 +58,19 @@ func (m KafkaGauge) Snapshot() metrics.Gauge {
 			Name:      m.Name,
 			Timestamp: time.Now(),
 			Meta:      m.Meta,
+			Key:       m.Key,
 		},
 		Gauge: m.Gauge.Snapshot(),
 	}
 }
 
 // NewKafkaGauge build new kafka gauge
-func NewKafkaGauge(name string, meta map[string]interface{}) KafkaGauge {
+func NewKafkaGauge(name, key string, meta map[string]interface{}) KafkaGauge {
 	return KafkaGauge{
 		BaseMetric: BaseMetric{
 			Name: name,
 			Meta: meta,
+			Key:  key,
 		},
 		Gauge: metrics.NewGauge(),
 	}

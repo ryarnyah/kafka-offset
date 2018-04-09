@@ -142,7 +142,7 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 		}
 		topicPartitions[topic] = partitions
 		topicPartitionsMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_topic_partition_%s", topic),
-			NewKafkaGauge("kafka_topic_partition", map[string]interface{}{
+			NewKafkaGauge("kafka_topic_partition", topic, map[string]interface{}{
 				"topic":     topic,
 				"timestamp": start,
 			})).(metrics.Gauge)
@@ -164,14 +164,14 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 				return nil, err
 			}
 			offsetNewestMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_topic_partition_offset_newest_%s_%d", topic, partition),
-				NewKafkaGauge("kafka_topic_partition_offset_newest", map[string]interface{}{
+				NewKafkaGauge("kafka_topic_partition_offset_newest", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 					"topic":     topic,
 					"partition": partition,
 					"timestamp": start,
 				})).(metrics.Gauge)
 			offsetNewestMetric.Update(newestOffset)
 			offsetOldestMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_topic_partition_offset_oldest_%s_%d", topic, partition),
-				NewKafkaGauge("kafka_topic_partition_offset_oldest", map[string]interface{}{
+				NewKafkaGauge("kafka_topic_partition_offset_oldest", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 					"topic":     topic,
 					"partition": partition,
 					"timestamp": start,
@@ -190,7 +190,7 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 			}
 			if leader != nil {
 				leaderTopicPartitionMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_leader_topic_partition_%s_%d", topic, partition),
-					NewKafkaGauge("kafka_leader_topic_partition", map[string]interface{}{
+					NewKafkaGauge("kafka_leader_topic_partition", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 						"topic":     topic,
 						"partition": partition,
 						"timestamp": start,
@@ -203,7 +203,7 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 				return nil, err
 			}
 			replicasTopicPartitionMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_replicas_topic_partition_%s_%d", topic, partition),
-				NewKafkaGauge("kafka_replicas_topic_partition", map[string]interface{}{
+				NewKafkaGauge("kafka_replicas_topic_partition", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 					"topic":     topic,
 					"partition": partition,
 					"timestamp": start,
@@ -214,14 +214,14 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 				return nil, err
 			}
 			inSyncReplicasMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_in_sync_replicas_%s_%d", topic, partition),
-				NewKafkaGauge("kafka_in_sync_replicas", map[string]interface{}{
+				NewKafkaGauge("kafka_in_sync_replicas", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 					"topic":     topic,
 					"partition": partition,
 					"timestamp": start,
 				})).(metrics.Gauge)
 			inSyncReplicasMetric.Update(int64(len(inSyncReplicas)))
 			leaderIsPreferredTopicPartitionMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_leader_is_preferred_topic_partition_%s_%d", topic, partition),
-				NewKafkaGauge("kafka_leader_is_preferred_topic_partition", map[string]interface{}{
+				NewKafkaGauge("kafka_leader_is_preferred_topic_partition", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 					"topic":     topic,
 					"partition": partition,
 					"timestamp": start,
@@ -232,7 +232,7 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 				leaderIsPreferredTopicPartitionMetric.Update(0)
 			}
 			underReplicatedTopicPartitionMetric := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_under_replicated_topic_partition_%s_%d", topic, partition),
-				NewKafkaGauge("kafka_under_replicated_topic_partition", map[string]interface{}{
+				NewKafkaGauge("kafka_under_replicated_topic_partition", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 					"topic":     topic,
 					"partition": partition,
 					"timestamp": start,
@@ -332,7 +332,7 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 				}
 
 				consumerGroupLag := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_consumer_group_lag_%s_%s_%d", group, topic, partition),
-					NewKafkaGauge("kafka_consumer_group_lag", map[string]interface{}{
+					NewKafkaGauge("kafka_consumer_group_lag", fmt.Sprintf("%s-%s-%d", group, topic, partition), map[string]interface{}{
 						"group":     group,
 						"topic":     topic,
 						"partition": partition,
@@ -340,7 +340,7 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 					})).(metrics.Gauge)
 				consumerGroupLag.Update(lastOffset - offset.Offset)
 				consumerGroupLastOffset := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_consumer_group_latest_offset_%s_%s_%d", group, topic, partition),
-					NewKafkaGauge("kafka_consumer_group_latest_offset", map[string]interface{}{
+					NewKafkaGauge("kafka_consumer_group_latest_offset", fmt.Sprintf("%s-%s-%d", group, topic, partition), map[string]interface{}{
 						"group":     group,
 						"topic":     topic,
 						"partition": partition,
@@ -426,7 +426,7 @@ func (s *KafkaSource) markTopicOffset(topic string, partitionOffsets map[int32]i
 	previousOffset, ok := s.previousTopicOffset[topic]
 	if ok {
 		topicRate := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_topic_rate_%s", topic),
-			NewKafkaMeter("kafka_topic_rate", map[string]interface{}{
+			NewKafkaMeter("kafka_topic_rate", topic, map[string]interface{}{
 				"topic": topic,
 			})).(metrics.Meter)
 		topicRate.Mark(offset - previousOffset)
@@ -445,7 +445,7 @@ func (s *KafkaSource) markConsumerGroupOffset(group, topic string, partitionOffs
 	previousOffset, ok := s.previousConsumerGroupOffset[group+"_"+topic]
 	if ok {
 		consumerGroupRate := s.kafkaRegistry.GetOrRegister(fmt.Sprintf("kafka_consumer_group_rate_%s_%s", group, topic),
-			NewKafkaMeter("kafka_consumer_group_rate", map[string]interface{}{
+			NewKafkaMeter("kafka_consumer_group_rate", fmt.Sprintf("%s-%s", group, topic), map[string]interface{}{
 				"group": group,
 				"topic": topic,
 			})).(metrics.Meter)

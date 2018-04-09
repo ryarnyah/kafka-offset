@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	sinkName = flag.String("sink", "log", "Sink to use (log, kafka, elasticsearch)")
+	sinkName = flag.String("sink", "log", "Sink to use (log, kafka, elasticsearch, collectd)")
 	profile  = flag.String("profile", "prod", "Profile to apply to log")
 	logLevel = flag.String("log-level", "info", "Log level")
 )
