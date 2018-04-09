@@ -6,7 +6,8 @@ Kafka metrics offset fetcher with some sinks :D
 
 #### Binaries
 
-- **linux** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.3.0/kafka-offset-linux-amd64)
+- **linux** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.3.0/kafka-offset-linux-amd64) [386](https://github.com/ryarnyah/kafka-offset/releases/download/0.3.0/kafka-offset-linux-386) [arm](https://github.com/ryarnyah/kafka-offset/releases/download/0.3.0/kafka-offset-linux-arm) [arm64](https://github.com/ryarnyah/kafka-offset/releases/download/0.3.0/kafka-offset-linux-arm64)
+- **windows** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.3.0/kafka-offset-windows-amd64) [386](https://github.com/ryarnyah/kafka-offset/releases/download/0.3.0/kafka-offset-windows-386)
 
 ```bash
 sudo curl -L https://github.com/ryarnyah/kafka-offset/releases/download/0.3.0/kafka-offset-linux-amd64 -o /usr/local/bin/kafka-offset && sudo chmod +x /usr/local/bin/kafka-offset
