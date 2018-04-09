@@ -48,6 +48,16 @@ Usage of ./kafka-offset:
     	Elasticsearch sink URL (default "http://localhost:9200")
   -elasticsearch-username string
     	Elasticsearch username
+  -influxdb-addr string
+    	Hostname of influxdb (default "http://localhost:8086")
+  -influxdb-database string
+    	Influxdb database (default "metrics")
+  -influxdb-password string
+    	Influxdb user password
+  -influxdb-retention-policy string
+    	Influxdb Retention Policy (default "1h")
+  -influxdb-username string
+    	Influxdb username
   -kafka-sink-brokers string
     	Kafka sink brokers (default "localhost:9092")
   -kafka-sink-sasl-password string
@@ -152,4 +162,11 @@ TypesDB "/opt/collectd/share/collectd/kafka/types.db.custom"
 ```bash
 sudo mkdir -p /opt/collectd/share/collectd/kafka/
 sudo curl -L https://raw.githubusercontent.com/ryarnyah/kafka-offset/master/deploy/collectd/types.db -o /opt/collectd/share/collectd/kafka/types.db.custom
+```
+
+#### InfluxDB
+InfluxDB sink export metrics to specified database (must exist) with default retention.
+##### Example
+```bash
+docker run ryarnyah/kafka-offset:0.3.0 -sink influxdb -source-brokers localhost:9092 -influxdb-addr http://localhost:8086
 ```

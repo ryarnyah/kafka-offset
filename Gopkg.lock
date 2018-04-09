@@ -44,6 +44,16 @@
   revision = "553a641470496b2327abcac10b36396bd98e45c9"
 
 [[projects]]
+  name = "github.com/influxdata/influxdb"
+  packages = [
+    "client/v2",
+    "models",
+    "pkg/escape"
+  ]
+  revision = "cdae4ccde4c67c3390d8ae8a1a06bd3b4cdce5c5"
+  version = "v1.5.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/mailru/easyjson"
   packages = [
@@ -106,6 +116,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4eabcf6a2ce8b573d3ce33aec81692e9b7d4831d3c2a1f8ec7a0ad96d671cb30"
+  inputs-digest = "d1abedd3e9b4c7aae9f5cfea494c78387d3ab5bd5b759c9a05c18c7cfbeee65c"
   solver-name = "gps-cdcl"
   solver-version = 1
