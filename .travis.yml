@@ -33,6 +33,21 @@ deploy:
       - cross/kafka-offset-linux-amd64.md5
       - cross/kafka-offset-linux-amd64.sha256
       - cross/kafka-offset-linux-amd64
+      - cross/kafka-offset-linux-386.md5
+      - cross/kafka-offset-linux-386.sha256
+      - cross/kafka-offset-linux-386
+      - cross/kafka-offset-linux-arm.md5
+      - cross/kafka-offset-linux-arm.sha256
+      - cross/kafka-offset-linux-arm
+      - cross/kafka-offset-linux-arm64.md5
+      - cross/kafka-offset-linux-arm64.sha256
+      - cross/kafka-offset-linux-arm64
+      - cross/kafka-offset-windows-amd64.md5
+      - cross/kafka-offset-windows-amd64.sha256
+      - cross/kafka-offset-windows-amd64
+      - cross/kafka-offset-windows-386.md5
+      - cross/kafka-offset-windows-386.sha256
+      - cross/kafka-offset-windows-386
     skip_cleanup: true
     on:
       tags: true
