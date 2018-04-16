@@ -9,12 +9,18 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/ryarnyah/kafka-offset/pkg/metrics"
+
+	"net/http"
+	_ "net/http/pprof"
 )
 
 var (
 	sinkName = flag.String("sink", "log", "Sink to use (log, kafka, elasticsearch, collectd)")
 	profile  = flag.String("profile", "prod", "Profile to apply to log")
 	logLevel = flag.String("log-level", "info", "Log level")
+
+	profiling     = flag.Bool("profiling-enable", false, "Enable profiling")
+	profilingHost = flag.String("profiling-host", "localhost:6060", "HTTP profiling host:port")
 )
 
 func installSignalHandler(stopChs ...chan interface{}) *sync.WaitGroup {
@@ -37,6 +43,12 @@ func installSignalHandler(stopChs ...chan interface{}) *sync.WaitGroup {
 
 func main() {
 	flag.Parse()
+
+	if *profiling {
+		go func() {
+			logrus.Error(http.ListenAndServe(*profilingHost, http.DefaultServeMux))
+		}()
+	}
 
 	if *profile == "prod" {
 		logrus.SetFormatter(&logrus.JSONFormatter{})
