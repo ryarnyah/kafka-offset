@@ -81,6 +81,10 @@ Usage of ./kafka-offset:
     	Log level (default "info")
   -profile string
     	Profile to apply to log (default "prod")
+  -profiling-enable
+    	Enable profiling
+  -profiling-host string
+    	HTTP profiling host:port (default "localhost:6060")
   -sink string
     	Sink to use (log, kafka, elasticsearch, collectd) (default "log")
   -sink-produce-interval duration
