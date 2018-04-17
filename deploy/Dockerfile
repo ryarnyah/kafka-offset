@@ -1,5 +1,10 @@
 FROM scratch
 
-ADD cross/kafka-offset-linux-amd64 /kafka-offset
+ARG BINARY_PATH
+ARG BINARY_NAME
 
-ENTRYPOINT ["/kafka-offset"]
+LABEL BINARY_FINAL_NAME $BINARY_NAME
+
+ADD $BINARY_PATH /binary
+
+ENTRYPOINT ["/binary"]

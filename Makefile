@@ -2,14 +2,17 @@
 PREFIX?=$(shell pwd)
 
 # Setup name variables for the package/tool
-NAME := kafka-offset
-PKG := github.com/ryarnyah/$(NAME)
+BASE_REPOSITORY := ryarnyah
+BINARIES := kafka-offset
+BASE_PKG := github.com/$(BASE_REPOSITORY)
+BASE_BINARIES := ./cmd
 
 # Set any default go build tags
-BUILDTAGS := ""
+BUILDTAGS := 
 
 # Set the build dir, where built cross-compiled binaries will be output
-BUILDDIR := ${PREFIX}/cross
+BASE_BUILD_DIR := build
+BUILDDIR := ${PREFIX}/$(BASE_BUILD_DIR)
 
 # Populate version variables
 # Add to compile time flags
@@ -19,9 +22,9 @@ GITUNTRACKEDCHANGES := $(shell git status --porcelain --untracked-files=no)
 ifneq ($(GITUNTRACKEDCHANGES),)
 	GITCOMMIT := $(GITCOMMIT)-dirty
 endif
-CTIMEVAR=-X $(PKG)/version.GITCOMMIT=$(GITCOMMIT) -X $(PKG)/version.VERSION=$(VERSION)
-GO_LDFLAGS=-ldflags "-w $(CTIMEVAR)"
-GO_LDFLAGS_STATIC=-ldflags "-w $(CTIMEVAR) -extldflags -static"
+CTIMEVAR=-X $(BASE_PKG)/$(1)/version.GITCOMMIT=$(GITCOMMIT) -X $(BASE_PKG)/$(1)/version.VERSION=$(VERSION)
+GO_LDFLAGS=-ldflags "-w $(call CTIMEVAR,$(1))"
+GO_LDFLAGS_STATIC=-ldflags "-w $(call CTIMEVAR,$(1)) -extldflags -static"
 
 # List the GOOS and GOARCH to build
 GOOSARCHES = linux/amd64 linux/386 linux/arm linux/arm64 windows/amd64 windows/386
@@ -29,18 +32,16 @@ GOOSARCHES = linux/amd64 linux/386 linux/arm linux/arm64 windows/amd64 windows/3
 all: clean build fmt lint test staticcheck vet ## Runs a clean, build, fmt, lint, test, staticcheck, vet
 
 .PHONY: build
-build: $(NAME) ## Builds a dynamic executable or package
+build: $(BINARIES) ## Builds a dynamic executable or package
 
-$(NAME): *.go VERSION.txt
+$(BINARIES): VERSION.txt
 	@echo "+ $@"
-	go build -tags "$(BUILDTAGS)" ${GO_LDFLAGS} -o $(NAME) .
+	go build -tags "$(BUILDTAGS)" $(call GO_LDFLAGS,$@) -o $@ $(BASE_BINARIES)/$@
 
 .PHONY: static
 static: ## Builds a static executable
 	@echo "+ $@"
-	CGO_ENABLED=1 go build \
-				-tags "$(BUILDTAGS) static_build" \
-				${GO_LDFLAGS_STATIC} -o $(NAME) .
+	$(foreach BINARY,$(BINARIES),CGO_ENABLED=1 go build -tags "$(BUILDTAGS) static_build" $(call GO_LDFLAGS_STATIC $(BINARY)) -o $(BINARY) $(BASE_BINARIES)/$(BINARY))
 
 .PHONY: fmt
 fmt: ## Verifies all files have men `gofmt`ed
@@ -81,36 +82,35 @@ cover: ## Runs go test with coverage
 define buildpretty
 mkdir -p $(BUILDDIR)/$(1)/$(2);
 GOOS=$(1) GOARCH=$(2) CGO_ENABLED=1 go build \
-	 -o $(BUILDDIR)/$(1)/$(2)/$(NAME) \
+	 -o $(BUILDDIR)/$(1)/$(2)/$(3) \
 	 -a -tags "$(BUILDTAGS) static_build netgo" \
-	 -installsuffix netgo ${GO_LDFLAGS_STATIC} .;
-md5sum $(BUILDDIR)/$(1)/$(2)/$(NAME) > $(BUILDDIR)/$(1)/$(2)/$(NAME).md5;
-sha256sum $(BUILDDIR)/$(1)/$(2)/$(NAME) > $(BUILDDIR)/$(1)/$(2)/$(NAME).sha256;
+	 -installsuffix netgo $(call GO_LDFLAGS_STATIC,$3) $(BASE_BINARIES)/$(3);
+md5sum $(BUILDDIR)/$(1)/$(2)/$(3) > $(BUILDDIR)/$(1)/$(2)/$(3).md5;
+sha256sum $(BUILDDIR)/$(1)/$(2)/$(3) > $(BUILDDIR)/$(1)/$(2)/$(3).sha256;
 endef
 
 .PHONY: cross
-cross: *.go VERSION.txt ## Builds the cross-compiled binaries, creating a clean directory structure (eg. GOOS/GOARCH/binary)
+cross: VERSION.txt ## Builds the cross-compiled binaries, creating a clean directory structure (eg. GOOS/GOARCH/binary)
 	@echo "+ $@"
-	$(foreach GOOSARCH,$(GOOSARCHES), $(call buildpretty,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH))))
+	$(foreach BINARY,$(BINARIES), $(foreach GOOSARCH,$(GOOSARCHES), $(call buildpretty,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH)),$(BINARY))))
 
 define buildrelease
 GOOS=$(1) GOARCH=$(2) CGO_ENABLED=1 go build \
-	 -o $(BUILDDIR)/$(NAME)-$(1)-$(2) \
+	 -o $(BUILDDIR)/$(3)-$(1)-$(2) \
 	 -a -tags "$(BUILDTAGS) static_build netgo" \
-	 -installsuffix netgo ${GO_LDFLAGS_STATIC} .;
-md5sum $(BUILDDIR)/$(NAME)-$(1)-$(2) > $(BUILDDIR)/$(NAME)-$(1)-$(2).md5;
-sha256sum $(BUILDDIR)/$(NAME)-$(1)-$(2) > $(BUILDDIR)/$(NAME)-$(1)-$(2).sha256;
+	 -installsuffix netgo $(call GO_LDFLAGS_STATIC,$3) $(BASE_BINARIES)/$(3);
+md5sum $(BUILDDIR)/$(3)-$(1)-$(2) > $(BUILDDIR)/$(3)-$(1)-$(2).md5;
+sha256sum $(BUILDDIR)/$(3)-$(1)-$(2) > $(BUILDDIR)/$(3)-$(1)-$(2).sha256;
 endef
 
 .PHONY: release
-release: *.go VERSION.txt ## Builds the cross-compiled binaries, naming them in such a way for release (eg. binary-GOOS-GOARCH)
+release: VERSION.txt ## Builds the cross-compiled binaries, naming them in such a way for release (eg. binary-GOOS-GOARCH)
 	@echo "+ $@"
-	$(foreach GOOSARCH,$(GOOSARCHES), $(call buildrelease,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH))))
+	$(foreach BINARY,$(BINARIES), $(foreach GOOSARCH,$(GOOSARCHES), $(call buildrelease,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH)),$(BINARY))))
 
 .PHONY: bump-version
 BUMP := patch
 bump-version: ## Bump the version in the version file. Set BUMP to [ patch | major | minor ]
-	@go get -u github.com/jessfraz/junk/sembump # update sembump tool
 	$(eval NEW_VERSION = $(shell sembump --kind $(BUMP) $(VERSION)))
 	@echo "Bumping VERSION.txt from $(VERSION) to $(NEW_VERSION)"
 	echo $(NEW_VERSION) > VERSION.txt
@@ -118,7 +118,7 @@ bump-version: ## Bump the version in the version file. Set BUMP to [ patch | maj
 	sed -e s/$(VERSION)/$(NEW_VERSION)/g README.md > README.md.tmp
 	mv README.md.tmp README.md
 	git add VERSION.txt README.md
-	git commit -vsam "Bump version to $(NEW_VERSION)"
+	git commit -vsm "Bump version to $(NEW_VERSION)"
 	@echo "Run make tag to create and push the tag for new version $(NEW_VERSION)"
 
 .PHONY: tag
@@ -130,12 +130,14 @@ tag: ## Create a new git tag to prepare to build a release
 AUTHORS:
 	@$(file >$@,# This file lists all individuals having contributed content to the repository.)
 	@$(file >>$@,# For how it is generated, see `make AUTHORS`.)
-	@echo "$(shell git log --format='\n%aN <%aE>' | LC_ALL=C.UTF-8 sort -uf)" >> $@
+	@echo "$(shell git log --format='\n%aN <%aE>' | LC_ALL=C.UTF-8 sort -uf)" > $@
+	git add AUTHORS
+	git commit -vsm "Updated AUTHORS"
 
 .PHONY: clean
 clean: ## Cleanup any build binaries or packages
 	@echo "+ $@"
-	$(RM) $(NAME)
+	$(foreach BINARY,$(BINARIES), $(RM) $(BINARY))
 	$(RM) -r $(BUILDDIR)
 
 .PHONY: help
@@ -143,9 +145,24 @@ help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: docker
-docker:
-	@docker build -t ryarnyah/kafka-offset:$(VERSION) -f deploy/Dockerfile .
+docker: ## Build docker images for GOOS/GOARCH/BINARIES
+	$(foreach BINARY,$(BINARIES), $(foreach GOOSARCH,$(GOOSARCHES), $(call builddocker,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH)),$(BINARY))))
 
 .PHONY: docker-deploy
-docker-deploy:
-	@docker push ryarnyah/kafka-offset:$(VERSION)
+docker-deploy: ## Deploy docker images to hub
+	$(foreach BINARY,$(BINARIES), $(foreach GOOSARCH,$(GOOSARCHES), $(call deploydocker,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH)),$(BINARY))))
+
+define builddocker
+docker build --build-arg BINARY_PATH=$(BASE_BUILD_DIR)/$(3)-$(1)-$(2) --build-arg BINARY_NAME=$(3) -t $(BASE_REPOSITORY)/$(3)-$(1)-$(2):$(VERSION) -f deploy/Dockerfile .;
+endef
+
+define deploydocker
+docker push $(BASE_REPOSITORY)/$(3)-$(1)-$(2):$(VERSION);
+endef
+
+.PHONY: dev-dependencies
+dev-dependencies: ## Install all dev dependencies
+	@go get -u github.com/golang/dep/cmd/dep
+	@go get -u github.com/jessfraz/junk/sembump
+	@go get -u honnef.co/go/tools/cmd/staticcheck
+	@go get -u golang.org/x/lint/golint
