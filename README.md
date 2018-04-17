@@ -30,13 +30,23 @@ $ make
 
 #### Running with Docker
 ```bash
-docker run ryarnyah/kafka-offset:0.4.0 <option>
+docker run ryarnyah/kafka-offset-linux-amd64:0.4.0 <option>
 ```
 
 ## Usage
 
 ```bash
-Usage of ./kafka-offset:
+
+ _  __      __ _                ___   __  __          _
+| |/ /__ _ / _| | ____ _       / _ \ / _|/ _|___  ___| |_
+| ' // _` | |_| |/ / _` |_____| | | | |_| |_/ __|/ _ \ __|
+| . \ (_| |  _|   < (_| |_____| |_| |  _|  _\__ \  __/ |_
+|_|\_\__,_|_| |_|\_\__,_|      \___/|_| |_| |___/\___|\__|
+
+ Scrape kafka metrics and send them to some sinks!
+ Version: 0.4.0
+ Build: 3eec8d5-dirty
+
   -collectd-hostname string
     	Hostname for collectd plugin
   -collectd-interval string
@@ -107,6 +117,8 @@ Usage of ./kafka-offset:
     	Kafka insecure ssl connection
   -source-ssl-key string
     	Kafka SSL key
+  -version
+    	Print version
 ```
 
 ### Supported metrics
@@ -134,7 +146,7 @@ Simple log sink with logrus
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset:0.4.0 -sink log -source-brokers localhost:9092
+docker run ryarnyah/kafka-offset-linux-amd64:0.4.0 -sink log -source-brokers localhost:9092
 ```
 
 #### Kafka (-sink kafka)
@@ -142,7 +154,7 @@ Kafka sink export metrics as JSON format to specified topic. SASL/SSL supported.
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset:0.4.0 -sink kafka -source-brokers localhost:9092 -kafka-sink-brokers localhost:9092 -kafka-sink-topic metrics
+docker run ryarnyah/kafka-offset-linux-amd64:0.4.0 -sink kafka -source-brokers localhost:9092 -kafka-sink-brokers localhost:9092 -kafka-sink-topic metrics
 ```
 
 #### Elasticsearch (-sink elasticsearch)
@@ -150,7 +162,7 @@ Elasticsearch V6 sink export metrics as documents to specified index. Auth suppo
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset:0.4.0 -sink elasticsearch -source-brokers localhost:9092 -elasticsearch-sink-url localhost:9200 -elasticsearch-sink-index metrics
+docker run ryarnyah/kafka-offset-linux-amd64:0.4.0 -sink elasticsearch -source-brokers localhost:9092 -elasticsearch-sink-url localhost:9200 -elasticsearch-sink-index metrics
 ```
 
 #### Collectd (-sink collectd)
@@ -173,5 +185,5 @@ sudo curl -L https://raw.githubusercontent.com/ryarnyah/kafka-offset/master/depl
 InfluxDB sink export metrics to specified database (must exist) with default retention.
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset:0.4.0 -sink influxdb -source-brokers localhost:9092 -influxdb-addr http://localhost:8086
+docker run ryarnyah/kafka-offset-linux-amd64:0.4.0 -sink influxdb -source-brokers localhost:9092 -influxdb-addr http://localhost:8086
 ```

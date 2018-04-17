@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/ryarnyah/kafka-offset/pkg/metrics"
+	"github.com/ryarnyah/kafka-offset/version"
 
 	"net/http"
 	_ "net/http/pprof"
@@ -21,6 +23,22 @@ var (
 
 	profiling     = flag.Bool("profiling-enable", false, "Enable profiling")
 	profilingHost = flag.String("profiling-host", "localhost:6060", "HTTP profiling host:port")
+	v             = flag.Bool("version", false, "Print version")
+)
+
+const (
+	BANNER = `
+ _  __      __ _                ___   __  __          _
+| |/ /__ _ / _| | ____ _       / _ \ / _|/ _|___  ___| |_
+| ' // _` + "`" + ` | |_| |/ / _` + "`" + ` |_____| | | | |_| |_/ __|/ _ \ __|
+| . \ (_| |  _|   < (_| |_____| |_| |  _|  _\__ \  __/ |_
+|_|\_\__,_|_| |_|\_\__,_|      \___/|_| |_| |___/\___|\__|
+
+ Scrape kafka metrics and send them to some sinks!
+ Version: %s
+ Build: %s
+
+`
 )
 
 func installSignalHandler(stopChs ...chan interface{}) *sync.WaitGroup {
@@ -42,7 +60,16 @@ func installSignalHandler(stopChs ...chan interface{}) *sync.WaitGroup {
 }
 
 func main() {
+	flag.Usage = func() {
+		fmt.Fprint(os.Stderr, fmt.Sprintf(BANNER, version.VERSION, version.GITCOMMIT))
+		flag.PrintDefaults()
+	}
 	flag.Parse()
+
+	if *v {
+		fmt.Printf(BANNER, version.VERSION, version.GITCOMMIT)
+		return
+	}
 
 	if *profiling {
 		go func() {
