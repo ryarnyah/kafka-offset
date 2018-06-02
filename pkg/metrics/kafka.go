@@ -302,19 +302,22 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 		}
 
 		for _, groupDescrition := range resp.Groups {
-			for _, member := range groupDescrition.Members {
-				assign, err := member.GetMemberAssignment()
-				if err != nil {
-					return err
+			// Check if group is a consumer group (Cf ConsumerProtocol.PROTOCOL_TYPE) and if group is stable (no reblancing)
+			if groupDescrition.State == "Stable" && groupDescrition.ProtocolType == "consumer" {
+				for _, member := range groupDescrition.Members {
+					assign, err := member.GetMemberAssignment()
+					if err != nil {
+						return err
+					}
+					topicsParition := make(map[string][]int32)
+					if consumerGroupAssignedTopicPartition[groupDescrition.GroupId] != nil {
+						topicsParition = consumerGroupAssignedTopicPartition[groupDescrition.GroupId]
+					}
+					for topic, partitions := range assign.Topics {
+						topicsParition[topic] = append(topicsParition[topic], partitions...)
+					}
+					consumerGroupAssignedTopicPartition[groupDescrition.GroupId] = topicsParition
 				}
-				topicsParition := make(map[string][]int32)
-				if consumerGroupAssignedTopicPartition[groupDescrition.GroupId] != nil {
-					topicsParition = consumerGroupAssignedTopicPartition[groupDescrition.GroupId]
-				}
-				for topic, partitions := range assign.Topics {
-					topicsParition[topic] = append(topicsParition[topic], partitions...)
-				}
-				consumerGroupAssignedTopicPartition[groupDescrition.GroupId] = topicsParition
 			}
 		}
 	}
