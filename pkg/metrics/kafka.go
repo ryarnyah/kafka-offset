@@ -273,7 +273,6 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 	if len(brokers) < 1 {
 		return fmt.Errorf("Unable to connect to brokers %+v", brokers)
 	}
-	consumerGroupAssignedTopicPartition := make(map[string]map[string][]int32)
 	for _, broker := range brokers {
 		conn, err := broker.Connected()
 		if err != nil {
@@ -293,43 +292,43 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 		for groupID := range response.Groups {
 			consumerGroups = append(consumerGroups, groupID)
 		}
+	}
 
-		resp, err := broker.DescribeGroups(&sarama.DescribeGroupsRequest{
-			Groups: consumerGroups,
+	for _, group := range consumerGroups {
+		topicsParitions := make(map[string][]int32)
+
+		coordinator, err := s.client.Coordinator(group)
+		if err != nil {
+			return err
+		}
+
+		resp, err := coordinator.DescribeGroups(&sarama.DescribeGroupsRequest{
+			Groups: []string{group},
 		})
 		if err != nil {
 			return err
 		}
 
 		for _, groupDescrition := range resp.Groups {
-			for _, member := range groupDescrition.Members {
-				assign, err := member.GetMemberAssignment()
-				if err != nil {
-					return err
+			// Check if group is a consumer group (Cf ConsumerProtocol.PROTOCOL_TYPE) and if group is stable (no reblancing)
+			if groupDescrition.State == "Stable" && groupDescrition.ProtocolType == "consumer" {
+				for _, member := range groupDescrition.Members {
+					assign, err := member.GetMemberAssignment()
+					if err != nil {
+						return err
+					}
+					for topic, partitions := range assign.Topics {
+						topicsParitions[topic] = append(topicsParitions[topic], partitions...)
+					}
 				}
-				topicsParition := make(map[string][]int32)
-				if consumerGroupAssignedTopicPartition[groupDescrition.GroupId] != nil {
-					topicsParition = consumerGroupAssignedTopicPartition[groupDescrition.GroupId]
-				}
-				for topic, partitions := range assign.Topics {
-					topicsParition[topic] = append(topicsParition[topic], partitions...)
-				}
-				consumerGroupAssignedTopicPartition[groupDescrition.GroupId] = topicsParition
 			}
-		}
-	}
-
-	for _, group := range consumerGroups {
-		coordinator, err := s.client.Coordinator(group)
-		if err != nil {
-			return err
 		}
 
 		request := &sarama.OffsetFetchRequest{
 			ConsumerGroup: group,
 			Version:       1,
 		}
-		for topic, partitions := range consumerGroupAssignedTopicPartition[group] {
+		for topic, partitions := range topicsParitions {
 			for _, partition := range partitions {
 				request.AddPartition(topic, partition)
 			}
