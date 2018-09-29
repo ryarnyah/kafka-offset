@@ -467,6 +467,13 @@ type SearchHits struct {
 	Hits      []*SearchHit `json:"hits"`      // the actual hits returned
 }
 
+// NestedHit is a nested innerhit
+type NestedHit struct {
+	Field  string     `json:"field"`
+	Offset int        `json:"offset,omitempty"`
+	Child  *NestedHit `json:"_nested,omitempty"`
+}
+
 // SearchHit is a single hit.
 type SearchHit struct {
 	Score          *float64                       `json:"_score"`          // computed score
@@ -484,6 +491,7 @@ type SearchHit struct {
 	Explanation    *SearchExplanation             `json:"_explanation"`    // explains how the score was computed
 	MatchedQueries []string                       `json:"matched_queries"` // matched queries
 	InnerHits      map[string]*SearchHitInnerHits `json:"inner_hits"`      // inner hits with ES >= 1.5.0
+	Nested         *NestedHit                     `json:"_nested"`         // for nested inner hits
 
 	// Shard
 	// HighlightFields
@@ -491,6 +499,7 @@ type SearchHit struct {
 	// MatchedFilters
 }
 
+// SearchHitInnerHits is used for inner hits.
 type SearchHitInnerHits struct {
 	Hits *SearchHits `json:"hits"`
 }
@@ -521,15 +530,16 @@ type SearchSuggestion struct {
 // SearchSuggestionOption is an option of a SearchSuggestion.
 // See https://www.elastic.co/guide/en/elasticsearch/reference/6.2/search-suggesters.html.
 type SearchSuggestionOption struct {
-	Text         string           `json:"text"`
-	Index        string           `json:"_index"`
-	Type         string           `json:"_type"`
-	Id           string           `json:"_id"`
-	Score        float64          `json:"score"`
-	Highlighted  string           `json:"highlighted"`
-	CollateMatch bool             `json:"collate_match"`
-	Freq         int              `json:"freq"` // from TermSuggestion.Option in Java API
-	Source       *json.RawMessage `json:"_source"`
+	Text            string           `json:"text"`
+	Index           string           `json:"_index"`
+	Type            string           `json:"_type"`
+	Id              string           `json:"_id"`
+	Score           float64          `json:"score"`  // term and phrase suggesters uses "score" as of 6.2.4
+	ScoreUnderscore float64          `json:"_score"` // completion and context suggesters uses "_score" as of 6.2.4
+	Highlighted     string           `json:"highlighted"`
+	CollateMatch    bool             `json:"collate_match"`
+	Freq            int              `json:"freq"` // from TermSuggestion.Option in Java API
+	Source          *json.RawMessage `json:"_source"`
 }
 
 // SearchProfile is a list of shard profiling data collected during

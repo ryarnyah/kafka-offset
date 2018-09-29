@@ -10,7 +10,7 @@ import (
 
 // GetTLSConfiguration build TLS configuration for kafka
 func GetTLSConfiguration(caFile string, certFile string, keyFile string, insecure bool) (*tls.Config, bool, error) {
-	logrus.Debugf("configure tls %s %s %s %b", caFile, certFile, keyFile, insecure)
+	logrus.Debugf("configure tls %s %s %s %t", caFile, certFile, keyFile, insecure)
 	if (caFile == "" && (certFile == "" || keyFile == "")) && !insecure {
 		return nil, false, nil
 	}
