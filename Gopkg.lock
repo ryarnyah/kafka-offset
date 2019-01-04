@@ -110,7 +110,7 @@
   revision = "60711f1a8329503b04e1c88535f419d0bb440bff"
 
 [[projects]]
-  digest = "1:e01edb58fc507572461d56a8d24632c99af04686005dd5b411ec4b0029a24151"
+  digest = "1:e9ba3a532b2aedc8f8dcc06e136f794d496be02eb2ab17fb56e4b30152d0cfc1"
   name = "github.com/olivere/elastic"
   packages = [
     ".",
@@ -118,8 +118,8 @@
     "uritemplates",
   ]
   pruneopts = "UT"
-  revision = "bd115a1132ece51519151c33b5d74e1387d3265a"
-  version = "v6.2.8"
+  revision = "f5738570b28a4b5fab39442e3a5b5ffc599a562c"
+  version = "v6.2.15"
 
 [[projects]]
   digest = "1:4f0885b3f0dba96128a09a6f4b4231c42688fbd05f323224c6aa5adc9f4e87bf"
