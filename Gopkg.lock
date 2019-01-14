@@ -74,19 +74,18 @@
     "pkg/escape",
   ]
   pruneopts = "UT"
-  revision = "cb03c542a4054f0f4d3dc13919d31c456bdb5c39"
-  version = "v1.7.1"
+  revision = "698dbc789aff13c2678357a6b93ff73dd7136571"
+  version = "v1.7.3"
 
 [[projects]]
-  branch = "master"
-  digest = "1:2c584d8971881e9f9a7dd2e0a712e83cb5ded51c5173eef1615ce3f047dbded3"
+  digest = "1:937258f1293bc9295b4789b0abea5b4ec030e3caecb65a4e1dc0b6999957a5ed"
   name = "github.com/influxdata/platform"
   packages = [
     "models",
     "pkg/escape",
   ]
   pruneopts = "UT"
-  revision = "e3a9c044953a91b42583635686bfecaac7cd8dfd"
+  revision = "0f79e4ea3248354c789cba274542e0a8e55971db"
 
 [[projects]]
   branch = "master"
