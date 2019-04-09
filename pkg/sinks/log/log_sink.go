@@ -1,9 +1,9 @@
 package log
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/ryarnyah/kafka-offset/pkg/metrics"
 	"github.com/ryarnyah/kafka-offset/pkg/sinks/common"
+	"github.com/sirupsen/logrus"
 )
 
 // Sink default sink use logrus to print metrics

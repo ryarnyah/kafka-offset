@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/Sirupsen/logrus"
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/ryarnyah/kafka-offset/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 // KafkaSource represent kafka cluster source metrics
@@ -52,7 +52,7 @@ func init() {
 // NewKafkaSource build new kafka source scraper
 func NewKafkaSource(sink Sink) (*KafkaSource, error) {
 	if sink == nil {
-		return nil, fmt.Errorf("Unable to fink KafkaSink in config")
+		return nil, fmt.Errorf("unable to fink KafkaSink in config")
 	}
 
 	var err error
@@ -271,7 +271,7 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 
 	brokers := s.client.Brokers()
 	if len(brokers) < 1 {
-		return fmt.Errorf("Unable to connect to brokers %+v", brokers)
+		return fmt.Errorf("unable to connect to brokers %+v", brokers)
 	}
 	for _, broker := range brokers {
 		conn, err := broker.Connected()
@@ -417,11 +417,11 @@ func (s *KafkaSource) fetchMetrics() error {
 
 func (s *KafkaSource) produceMetrics() error {
 	s.kafkaRegistry.Each(func(name string, metric interface{}) {
-		switch metric.(type) {
+		switch metric := metric.(type) {
 		case metrics.Meter:
-			s.sink.GetMetricsChan() <- metric.(metrics.Meter).Snapshot()
+			s.sink.GetMetricsChan() <- metric.Snapshot()
 		case metrics.Gauge:
-			s.sink.GetMetricsChan() <- metric.(metrics.Gauge).Snapshot()
+			s.sink.GetMetricsChan() <- metric.Snapshot()
 		}
 	})
 	return nil

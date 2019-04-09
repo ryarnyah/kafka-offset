@@ -16,11 +16,10 @@ func init() {
 }
 
 var (
-	influxDBAddr            = flag.String("influxdb-addr", "http://localhost:8086", "Hostname of influxdb")
-	influxDBUsername        = flag.String("influxdb-username", os.Getenv("INFLUXDB_USERNAME"), "Influxdb username")
-	influxDBPassword        = flag.String("influxdb-password", os.Getenv("INFLUXDB_PASSWORD"), "Influxdb user password")
-	influxDBDatabase        = flag.String("influxdb-database", "metrics", "Influxdb database")
-	influxDBRetentionPolicy = flag.String("influxdb-retention-policy", "1h", "Influxdb Retention Policy")
+	influxDBAddr     = flag.String("influxdb-addr", "http://localhost:8086", "Hostname of influxdb")
+	influxDBUsername = flag.String("influxdb-username", os.Getenv("INFLUXDB_USERNAME"), "Influxdb username")
+	influxDBPassword = flag.String("influxdb-password", os.Getenv("INFLUXDB_PASSWORD"), "Influxdb user password")
+	influxDBDatabase = flag.String("influxdb-database", "metrics", "Influxdb database")
 )
 
 // Sink write metrics to kafka topic
