@@ -3,8 +3,8 @@ package common
 import (
 	"sync"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/ryarnyah/kafka-offset/pkg/metrics"
+	"github.com/sirupsen/logrus"
 )
 
 // Sink default sink use logrus to print metrics
@@ -56,14 +56,14 @@ func (s *Sink) Run() {
 		for {
 			select {
 			case metric := <-s.MetricsChan:
-				switch metric.(type) {
+				switch metric := metric.(type) {
 				case metrics.KafkaMeter:
-					err := s.KafkaMeterFunc(metric.(metrics.KafkaMeter))
+					err := s.KafkaMeterFunc(metric)
 					if err != nil {
 						logrus.Error(err)
 					}
 				case metrics.KafkaGauge:
-					err := s.KafkaGaugeFunc(metric.(metrics.KafkaGauge))
+					err := s.KafkaGaugeFunc(metric)
 					if err != nil {
 						logrus.Error(err)
 					}

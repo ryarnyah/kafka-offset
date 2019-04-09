@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // GetTLSConfiguration build TLS configuration for kafka

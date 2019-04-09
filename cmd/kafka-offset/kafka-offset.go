@@ -3,17 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/ryarnyah/kafka-offset/pkg/metrics"
 	"github.com/ryarnyah/kafka-offset/version"
-
-	"net/http"
-	_ "net/http/pprof"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -27,6 +26,7 @@ var (
 )
 
 const (
+	// BANNER for usage.
 	BANNER = `
  _  __      __ _                ___   __  __          _
 | |/ /__ _ / _| | ____ _       / _ \ / _|/ _|___  ___| |_
