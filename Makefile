@@ -163,8 +163,5 @@ endef
 .PHONY: dev-dependencies
 dev-dependencies: ## Install all dev dependencies
 	@GO111MODULE=off go get -u github.com/jessfraz/junk/sembump
-
-.PHONY: build-dependencies
-build-dependencies: ## Install all build dependencies
-	@go get -u honnef.co/go/tools/cmd/staticcheck
-	@go get -u golang.org/x/lint/golint
+	@GO111MODULE=off go get -u honnef.co/go/tools/cmd/staticcheck
+	@GO111MODULE=off go get -u golang.org/x/lint/golint

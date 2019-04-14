@@ -15,7 +15,7 @@ env:
     - GO111MODULE=on
     - GO15VENDOREXPERIMENT=1
 install:
-  - make build-dependencies
+  - make dev-dependencies
 script:
   - make
   - make cover
