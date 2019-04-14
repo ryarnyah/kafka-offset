@@ -15,8 +15,6 @@ type Sink struct {
 
 	CloseFunc func() error
 
-	StopCh chan interface{}
-
 	wg sync.WaitGroup
 }
 
@@ -27,9 +25,9 @@ func (s *Sink) GetMetricsChan() chan<- interface{} {
 
 // Close do nothing
 func (s *Sink) Close() error {
-	close(s.StopCh)
-	s.wg.Wait()
+
 	close(s.MetricsChan)
+	s.wg.Wait()
 	if s.CloseFunc != nil {
 		err := s.CloseFunc()
 		if err != nil {
@@ -42,7 +40,6 @@ func (s *Sink) Close() error {
 // NewCommonSink build channels to be used by others sinks
 func NewCommonSink() *Sink {
 	s := &Sink{}
-	s.StopCh = make(chan interface{})
 	s.MetricsChan = make(chan interface{}, 1024)
 
 	return s
@@ -53,24 +50,18 @@ func (s *Sink) Run() {
 	s.wg.Add(1)
 	go func(s *Sink) {
 		defer s.wg.Done()
-		for {
-			select {
-			case metric := <-s.MetricsChan:
-				switch metric := metric.(type) {
-				case metrics.KafkaMeter:
-					err := s.KafkaMeterFunc(metric)
-					if err != nil {
-						logrus.Error(err)
-					}
-				case metrics.KafkaGauge:
-					err := s.KafkaGaugeFunc(metric)
-					if err != nil {
-						logrus.Error(err)
-					}
+		for metric := range s.MetricsChan {
+			switch metric := metric.(type) {
+			case metrics.KafkaMeter:
+				err := s.KafkaMeterFunc(metric)
+				if err != nil {
+					logrus.Error(err)
 				}
-			case <-s.StopCh:
-				logrus.Info("Sink consume Stopped")
-				return
+			case metrics.KafkaGauge:
+				err := s.KafkaGaugeFunc(metric)
+				if err != nil {
+					logrus.Error(err)
+				}
 			}
 		}
 	}(s)
