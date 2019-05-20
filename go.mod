@@ -11,5 +11,5 @@ require (
 	github.com/olivere/elastic v6.2.17+incompatible
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
-	github.com/sirupsen/logrus v1.4.1
+	github.com/sirupsen/logrus v1.4.2
 )
