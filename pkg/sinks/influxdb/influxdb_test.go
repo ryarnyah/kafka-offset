@@ -1,6 +1,7 @@
 package influxdb
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -22,6 +23,9 @@ func (s *fakeInfluxDBClient) Write(bp influxdb.BatchPoints) error {
 	return nil
 }
 func (fakeInfluxDBClient) Query(q influxdb.Query) (*influxdb.Response, error) {
+	return nil, nil
+}
+func (fakeInfluxDBClient) QueryCtx(ctx context.Context, q influxdb.Query) (*influxdb.Response, error) {
 	return nil, nil
 }
 func (fakeInfluxDBClient) QueryAsChunk(q influxdb.Query) (*influxdb.ChunkedResponse, error) {
