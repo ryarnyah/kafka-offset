@@ -3,7 +3,7 @@ module github.com/ryarnyah/kafka-offset
 go 1.12
 
 require (
-	github.com/Shopify/sarama v1.26.2
+	github.com/Shopify/sarama v1.26.3
 	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/influxdata/influxdb v1.8.0
 	github.com/influxdata/platform v0.0.0-20190117200541-d500d3cf5589 // indirect
