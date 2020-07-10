@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/Shopify/sarama v1.26.3
-	github.com/influxdata/influxdb v1.8.0
+	github.com/influxdata/influxdb v1.8.1
 	github.com/influxdata/platform v0.0.0-20190117200541-d500d3cf5589 // indirect
 	github.com/mailru/easyjson v0.0.0-20190403194419-1ea4449da983 // indirect
 	github.com/olivere/elastic v6.2.33+incompatible
