@@ -33,7 +33,7 @@ func (s *Sink) closeClient() error {
 	return s.client.Close()
 }
 
-func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) error {
+func (s *Sink) kafkaMetrics(m []interface{}) error {
 	bp, err := influxdb.NewBatchPoints(influxdb.BatchPointsConfig{
 		Database:  *influxDBDatabase,
 		Precision: "s",
@@ -41,52 +41,41 @@ func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) error {
 	if err != nil {
 		return err
 	}
-	tags := make(map[string]string, len(metric.Meta))
-	for k, v := range metric.Meta {
-		tags[k] = fmt.Sprintf("%v", v)
+	for _, metric := range m {
+		switch metric := metric.(type) {
+		case metrics.KafkaMeter:
+			tags := make(map[string]string, len(metric.Meta))
+			for k, v := range metric.Meta {
+				tags[k] = fmt.Sprintf("%v", v)
+			}
+			fields := map[string]interface{}{
+				"count":     metric.Count(),
+				"rate1":     metric.Rate1(),
+				"rate5":     metric.Rate5(),
+				"rate15":    metric.Rate15(),
+				"rate_mean": metric.RateMean(),
+			}
+			pt, err := influxdb.NewPoint(metric.Name, tags, fields, metric.Timestamp)
+			if err != nil {
+				return err
+			}
+			bp.AddPoint(pt)
+		case metrics.KafkaGauge:
+			tags := make(map[string]string, len(metric.Meta))
+			for k, v := range metric.Meta {
+				tags[k] = fmt.Sprintf("%v", v)
+			}
+			fields := map[string]interface{}{
+				"value": metric.Value(),
+			}
+			pt, err := influxdb.NewPoint(metric.Name, tags, fields, metric.Timestamp)
+			if err != nil {
+				return err
+			}
+			bp.AddPoint(pt)
+		}
 	}
-	fields := map[string]interface{}{
-		"count":     metric.Count(),
-		"rate1":     metric.Rate1(),
-		"rate5":     metric.Rate5(),
-		"rate15":    metric.Rate15(),
-		"rate_mean": metric.RateMean(),
-	}
-	pt, err := influxdb.NewPoint(metric.Name, tags, fields, metric.Timestamp)
-	if err != nil {
-		return err
-	}
-	bp.AddPoint(pt)
-	if err := s.client.Write(bp); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Sink) kafkaGauge(metric metrics.KafkaGauge) error {
-	bp, err := influxdb.NewBatchPoints(influxdb.BatchPointsConfig{
-		Database:  *influxDBDatabase,
-		Precision: "s",
-	})
-	if err != nil {
-		return err
-	}
-	tags := make(map[string]string, len(metric.Meta))
-	for k, v := range metric.Meta {
-		tags[k] = fmt.Sprintf("%v", v)
-	}
-	fields := map[string]interface{}{
-		"value": metric.Value(),
-	}
-	pt, err := influxdb.NewPoint(metric.Name, tags, fields, metric.Timestamp)
-	if err != nil {
-		return err
-	}
-	bp.AddPoint(pt)
-	if err := s.client.Write(bp); err != nil {
-		return err
-	}
-	return nil
+	return s.client.Write(bp)
 }
 
 // NewSink build new kafka sink
@@ -105,8 +94,7 @@ func NewSink() (metrics.Sink, error) {
 		client: c,
 	}
 
-	sink.KafkaMeterFunc = sink.kafkaMeter
-	sink.KafkaGaugeFunc = sink.kafkaGauge
+	sink.KafkaMetricsFunc = sink.kafkaMetrics
 	sink.CloseFunc = sink.closeClient
 
 	sink.Run()

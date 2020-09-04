@@ -15,13 +15,23 @@ func init() {
 	metrics.RegisterSink("log", NewSink)
 }
 
-func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) error {
-	logrus.Infof("offsetMetrics %+v", metric)
+func (s *Sink) kafkaMetrics(m []interface{}) error {
+	for _, metric := range m {
+		switch metric := metric.(type) {
+		case metrics.KafkaMeter:
+			s.kafkaMeter(metric)
+		case metrics.KafkaGauge:
+			s.kafkaGauge(metric)
+		}
+	}
 	return nil
 }
-func (s *Sink) kafkaGauge(metric metrics.KafkaGauge) error {
+
+func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) {
+	logrus.Infof("offsetMetrics %+v", metric)
+}
+func (s *Sink) kafkaGauge(metric metrics.KafkaGauge) {
 	logrus.Infof("consumerGroupOffsetMetrics %+v", metric)
-	return nil
 }
 
 // NewSink build sink
@@ -30,8 +40,7 @@ func NewSink() (metrics.Sink, error) {
 		Sink: common.NewCommonSink(),
 	}
 
-	sink.KafkaMeterFunc = sink.kafkaMeter
-	sink.KafkaGaugeFunc = sink.kafkaGauge
+	sink.KafkaMetricsFunc = sink.kafkaMetrics
 
 	sink.Run()
 

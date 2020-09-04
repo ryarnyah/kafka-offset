@@ -30,11 +30,19 @@ var (
 	elasticsearchPassword = flag.String("elasticsearch-password", os.Getenv("SINK_ELASTICSEARCH_PASSWORD"), "Elasticsearch password")
 )
 
-func (s *Sink) sendMessage(msg interface{}) error {
-	_, err := s.client.Index().
-		Index(s.index).
-		Type("doc").
-		BodyJson(msg).
+func (s *Sink) sendMessages(m []interface{}) error {
+	bulkRequest := s.client.Bulk()
+
+	for _, msg := range m {
+		bulkRequest.Add(
+			elastic.NewBulkIndexRequest().
+				Index(s.index).
+				Type("doc").
+				Doc(msg),
+		)
+	}
+
+	_, err := bulkRequest.
 		Do(context.Background())
 	if err != nil {
 		return err
@@ -42,8 +50,21 @@ func (s *Sink) sendMessage(msg interface{}) error {
 	return nil
 }
 
-func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) error {
-	err := s.sendMessage(meter{
+func (s *Sink) kafkaMetrics(m []interface{}) error {
+	metricsSnapshot := make([]interface{}, 0)
+	for _, metric := range m {
+		switch metric := metric.(type) {
+		case metrics.KafkaMeter:
+			metricsSnapshot = append(metricsSnapshot, s.kafkaMeter(metric))
+		case metrics.KafkaGauge:
+			metricsSnapshot = append(metricsSnapshot, s.kafkaGauge(metric))
+		}
+	}
+	return s.sendMessages(metricsSnapshot)
+}
+
+func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) interface{} {
+	return meter{
 		Name:      metric.Name,
 		Timestamp: metric.Timestamp,
 		Meta:      metric.Meta,
@@ -52,23 +73,15 @@ func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) error {
 		Rate15:    metric.Rate15(),
 		RateMean:  metric.RateMean(),
 		Count:     metric.Count(),
-	})
-	if err != nil {
-		return err
 	}
-	return nil
 }
-func (s *Sink) kafkaGauge(metric metrics.KafkaGauge) error {
-	err := s.sendMessage(gauge{
+func (s *Sink) kafkaGauge(metric metrics.KafkaGauge) interface{} {
+	return gauge{
 		Name:      metric.Name,
 		Timestamp: metric.Timestamp,
 		Meta:      metric.Meta,
 		Value:     metric.Value(),
-	})
-	if err != nil {
-		return err
 	}
-	return nil
 }
 
 // NewSink build elasticsearch sink
@@ -87,8 +100,7 @@ func NewSink() (metrics.Sink, error) {
 		Sink:   common.NewCommonSink(),
 	}
 
-	sink.KafkaMeterFunc = sink.kafkaMeter
-	sink.KafkaGaugeFunc = sink.kafkaGauge
+	sink.KafkaMetricsFunc = sink.kafkaMetrics
 
 	sink.Run()
 

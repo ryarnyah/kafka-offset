@@ -47,15 +47,19 @@ func (s *Sink) closeProducer() error {
 	return nil
 }
 
-func (s *Sink) sendMessage(msg interface{}) error {
-	b, err := json.Marshal(msg)
-	if err != nil {
-		return err
+func (s *Sink) sendMessages(m []interface{}) error {
+	messages := make([]*sarama.ProducerMessage, 0)
+	for _, msg := range m {
+		b, err := json.Marshal(msg)
+		if err != nil {
+			return err
+		}
+		messages = append(messages, &sarama.ProducerMessage{
+			Topic: s.topic,
+			Value: sarama.ByteEncoder(b),
+		})
 	}
-	_, _, err = s.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: s.topic,
-		Value: sarama.ByteEncoder(b),
-	})
+	err := s.producer.SendMessages(messages)
 	if err != nil {
 		return err
 	}
@@ -64,8 +68,21 @@ func (s *Sink) sendMessage(msg interface{}) error {
 
 }
 
-func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) error {
-	err := s.sendMessage(meter{
+func (s *Sink) kafkaMetrics(m []interface{}) error {
+	metricsSnapshot := make([]interface{}, 0)
+	for _, metric := range m {
+		switch metric := metric.(type) {
+		case metrics.KafkaMeter:
+			metricsSnapshot = append(metricsSnapshot, s.kafkaMeter(metric))
+		case metrics.KafkaGauge:
+			metricsSnapshot = append(metricsSnapshot, s.kafkaGauge(metric))
+		}
+	}
+	return s.sendMessages(metricsSnapshot)
+}
+
+func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) interface{} {
+	return meter{
 		Name:      metric.Name,
 		Timestamp: metric.Timestamp,
 		Meta:      metric.Meta,
@@ -74,23 +91,16 @@ func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) error {
 		Rate15:    metric.Rate15(),
 		RateMean:  metric.RateMean(),
 		Count:     metric.Count(),
-	})
-	if err != nil {
-		return err
 	}
-	return nil
 }
-func (s *Sink) kafkaGauge(metric metrics.KafkaGauge) error {
-	err := s.sendMessage(gauge{
+
+func (s *Sink) kafkaGauge(metric metrics.KafkaGauge) interface{} {
+	return gauge{
 		Name:      metric.Name,
 		Timestamp: metric.Timestamp,
 		Meta:      metric.Meta,
 		Value:     metric.Value(),
-	})
-	if err != nil {
-		return err
 	}
-	return nil
 }
 
 // NewSink build new kafka sink
@@ -122,8 +132,7 @@ func NewSink() (metrics.Sink, error) {
 		topic:    *kafkaSinkTopic,
 		Sink:     common.NewCommonSink(),
 	}
-	sink.KafkaMeterFunc = sink.kafkaMeter
-	sink.KafkaGaugeFunc = sink.kafkaGauge
+	sink.KafkaMetricsFunc = sink.kafkaMetrics
 	sink.CloseFunc = sink.closeProducer
 
 	sink.Run()
