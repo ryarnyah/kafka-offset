@@ -61,7 +61,7 @@ func installSignalHandler(stopChs ...chan interface{}) *sync.WaitGroup {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprint(os.Stderr, fmt.Sprintf(BANNER, version.VERSION, version.GITCOMMIT))
+		fmt.Fprintf(os.Stderr, BANNER, version.VERSION, version.GITCOMMIT)
 		flag.PrintDefaults()
 	}
 	flag.Parse()

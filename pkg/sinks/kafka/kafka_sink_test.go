@@ -39,13 +39,13 @@ func TestSendToSink(t *testing.T) {
 		topic:    *kafkaSinkTopic,
 		Sink:     common.NewCommonSink(),
 	}
-	sink.KafkaMeterFunc = sink.kafkaMeter
-	sink.KafkaGaugeFunc = sink.kafkaGauge
+	sink.KafkaMetricsFunc = sink.kafkaMetrics
 	sink.CloseFunc = sink.closeProducer
 
 	sink.Run()
 
-	sink.GetMetricsChan() <- common_metrics.KafkaMeter{
+	testMetrics := make([]interface{}, 2)
+	testMetrics = append(testMetrics, common_metrics.KafkaMeter{
 		BaseMetric: common_metrics.BaseMetric{
 			Name:      "toto",
 			Key:       "titi",
@@ -53,9 +53,8 @@ func TestSendToSink(t *testing.T) {
 			Meta:      make(map[string]interface{}),
 		},
 		Meter: metrics.NilMeter{},
-	}
-
-	sink.GetMetricsChan() <- common_metrics.KafkaGauge{
+	})
+	testMetrics = append(testMetrics, common_metrics.KafkaGauge{
 		BaseMetric: common_metrics.BaseMetric{
 			Name:      "toto",
 			Key:       "titi",
@@ -63,7 +62,9 @@ func TestSendToSink(t *testing.T) {
 			Meta:      make(map[string]interface{}),
 		},
 		Gauge: metrics.NilGauge{},
-	}
+	})
+
+	sink.GetMetricsChan() <- testMetrics
 
 	sink.Close()
 

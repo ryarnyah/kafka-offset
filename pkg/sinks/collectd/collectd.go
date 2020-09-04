@@ -23,7 +23,19 @@ type Sink struct {
 	*common.Sink
 }
 
-func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) error {
+func (s *Sink) kafkaMetrics(m []interface{}) error {
+	for _, metric := range m {
+		switch metric := metric.(type) {
+		case metrics.KafkaMeter:
+			s.kafkaMeter(metric)
+		case metrics.KafkaGauge:
+			s.kafkaGauge(metric)
+		}
+	}
+	return nil
+}
+
+func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) {
 	fmt.Printf("PUTVAL %s/kafka/%s-%s interval=%s %d:%d,%d:%f,%d:%f,%d:%f,%d:%f\n", *collectdHostname, metric.Name, metric.Key, *collectdInterval,
 		metric.Timestamp.Unix(), metric.Count(),
 		metric.Timestamp.Unix(), metric.Rate1(),
@@ -31,12 +43,10 @@ func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) error {
 		metric.Timestamp.Unix(), metric.Rate15(),
 		metric.Timestamp.Unix(), metric.RateMean(),
 	)
-	return nil
 }
 
-func (s *Sink) kafkaGauge(metric metrics.KafkaGauge) error {
+func (s *Sink) kafkaGauge(metric metrics.KafkaGauge) {
 	fmt.Printf("PUTVAL %s/kafka/%s-%s interval=%s %d:%d\n", *collectdHostname, metric.Name, metric.Key, *collectdInterval, metric.Timestamp.Unix(), metric.Value())
-	return nil
 }
 
 // NewSink build new kafka sink
@@ -44,8 +54,7 @@ func NewSink() (metrics.Sink, error) {
 	sink := &Sink{
 		Sink: common.NewCommonSink(),
 	}
-	sink.KafkaMeterFunc = sink.kafkaMeter
-	sink.KafkaGaugeFunc = sink.kafkaGauge
+	sink.KafkaMetricsFunc = sink.kafkaMetrics
 
 	sink.Run()
 

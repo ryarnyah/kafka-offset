@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	go_metrics "github.com/rcrowley/go-metrics"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -44,7 +43,7 @@ func TestFetchLastOffsetsMetrics(t *testing.T) {
 		client:                      c,
 		sink:                        &sink,
 		cfg:                         config,
-		kafkaRegistry:               go_metrics.NewRegistry(),
+		kafkaRegistry:               metrics.NewRegistry(),
 		previousTopicOffset:         previousTopicOffset,
 		previousConsumerGroupOffset: previousConsumerGroupOffset,
 	}
@@ -175,7 +174,7 @@ func TestFetchConsumerGroupMetrics(t *testing.T) {
 		client:                      c,
 		sink:                        &sink,
 		cfg:                         config,
-		kafkaRegistry:               go_metrics.NewRegistry(),
+		kafkaRegistry:               metrics.NewRegistry(),
 		previousTopicOffset:         previousTopicOffset,
 		previousConsumerGroupOffset: previousConsumerGroupOffset,
 	}
@@ -273,13 +272,13 @@ func TestFetchConsumerGroupMetrics(t *testing.T) {
 }
 
 type fakeSink struct {
-	metricsChan chan interface{}
+	metricsChan chan []interface{}
 	metrics     []interface{}
 
 	sync.WaitGroup
 }
 
-func (s *fakeSink) GetMetricsChan() chan<- interface{} {
+func (s *fakeSink) GetMetricsChan() chan<- []interface{} {
 	return s.metricsChan
 }
 func (s *fakeSink) Close() error {
@@ -293,7 +292,9 @@ func (s *fakeSink) Run() {
 	go func() {
 		defer s.Done()
 		for m := range s.metricsChan {
-			s.metrics = append(s.metrics, m)
+			for metric := range m {
+				s.metrics = append(s.metrics, metric)
+			}
 		}
 	}()
 }

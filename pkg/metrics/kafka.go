@@ -416,14 +416,17 @@ func (s *KafkaSource) fetchMetrics() error {
 }
 
 func (s *KafkaSource) produceMetrics() error {
+	metricsSnapshot := make([]interface{}, 0)
 	s.kafkaRegistry.Each(func(name string, metric interface{}) {
 		switch metric := metric.(type) {
 		case metrics.Meter:
-			s.sink.GetMetricsChan() <- metric.Snapshot()
+			metricsSnapshot = append(metricsSnapshot, metric.Snapshot())
 		case metrics.Gauge:
-			s.sink.GetMetricsChan() <- metric.Snapshot()
+			metricsSnapshot = append(metricsSnapshot, metric.Snapshot())
 		}
 	})
+	s.sink.GetMetricsChan() <- metricsSnapshot
+
 	return nil
 }
 

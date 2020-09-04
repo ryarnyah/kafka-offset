@@ -3,15 +3,13 @@ package common
 import (
 	"sync"
 
-	"github.com/ryarnyah/kafka-offset/pkg/metrics"
 	"github.com/sirupsen/logrus"
 )
 
 // Sink default sink use logrus to print metrics
 type Sink struct {
-	MetricsChan    chan interface{}
-	KafkaMeterFunc func(metrics.KafkaMeter) error
-	KafkaGaugeFunc func(metrics.KafkaGauge) error
+	MetricsChan      chan []interface{}
+	KafkaMetricsFunc func([]interface{}) error
 
 	CloseFunc func() error
 
@@ -19,13 +17,12 @@ type Sink struct {
 }
 
 // GetMetricsChan metrics chan
-func (s *Sink) GetMetricsChan() chan<- interface{} {
+func (s *Sink) GetMetricsChan() chan<- []interface{} {
 	return s.MetricsChan
 }
 
 // Close do nothing
 func (s *Sink) Close() error {
-
 	close(s.MetricsChan)
 	s.wg.Wait()
 	if s.CloseFunc != nil {
@@ -40,7 +37,7 @@ func (s *Sink) Close() error {
 // NewCommonSink build channels to be used by others sinks
 func NewCommonSink() *Sink {
 	s := &Sink{}
-	s.MetricsChan = make(chan interface{}, 1024)
+	s.MetricsChan = make(chan []interface{}, 16)
 
 	return s
 }
@@ -50,18 +47,10 @@ func (s *Sink) Run() {
 	s.wg.Add(1)
 	go func(s *Sink) {
 		defer s.wg.Done()
-		for metric := range s.MetricsChan {
-			switch metric := metric.(type) {
-			case metrics.KafkaMeter:
-				err := s.KafkaMeterFunc(metric)
-				if err != nil {
-					logrus.Error(err)
-				}
-			case metrics.KafkaGauge:
-				err := s.KafkaGaugeFunc(metric)
-				if err != nil {
-					logrus.Error(err)
-				}
+		for m := range s.MetricsChan {
+			err := s.KafkaMetricsFunc(m)
+			if err != nil {
+				logrus.Error(err)
 			}
 		}
 	}(s)

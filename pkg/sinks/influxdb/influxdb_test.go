@@ -12,14 +12,14 @@ import (
 )
 
 type fakeInfluxDBClient struct {
-	points []influxdb.BatchPoints
+	points []*influxdb.Point
 }
 
 func (fakeInfluxDBClient) Ping(timeout time.Duration) (time.Duration, string, error) {
 	return time.Second, "", nil
 }
 func (s *fakeInfluxDBClient) Write(bp influxdb.BatchPoints) error {
-	s.points = append(s.points, bp)
+	s.points = append(s.points, bp.Points()...)
 	return nil
 }
 func (fakeInfluxDBClient) Query(q influxdb.Query) (*influxdb.Response, error) {
@@ -46,13 +46,13 @@ func TestSendToSink(t *testing.T) {
 		client: &client,
 		Sink:   common.NewCommonSink(),
 	}
-	sink.KafkaMeterFunc = sink.kafkaMeter
-	sink.KafkaGaugeFunc = sink.kafkaGauge
+	sink.KafkaMetricsFunc = sink.kafkaMetrics
 	sink.CloseFunc = sink.closeClient
 
 	sink.Run()
 
-	sink.GetMetricsChan() <- common_metrics.KafkaMeter{
+	testMetrics := make([]interface{}, 2)
+	testMetrics = append(testMetrics, common_metrics.KafkaMeter{
 		BaseMetric: common_metrics.BaseMetric{
 			Name:      "toto",
 			Key:       "titi",
@@ -60,9 +60,8 @@ func TestSendToSink(t *testing.T) {
 			Meta:      make(map[string]interface{}),
 		},
 		Meter: metrics.NilMeter{},
-	}
-
-	sink.GetMetricsChan() <- common_metrics.KafkaGauge{
+	})
+	testMetrics = append(testMetrics, common_metrics.KafkaGauge{
 		BaseMetric: common_metrics.BaseMetric{
 			Name:      "toto",
 			Key:       "titi",
@@ -70,7 +69,9 @@ func TestSendToSink(t *testing.T) {
 			Meta:      make(map[string]interface{}),
 		},
 		Gauge: metrics.NilGauge{},
-	}
+	})
+
+	sink.GetMetricsChan() <- testMetrics
 
 	sink.Close()
 
