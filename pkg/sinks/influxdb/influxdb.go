@@ -20,6 +20,7 @@ var (
 	influxDBUsername = flag.String("influxdb-username", os.Getenv("INFLUXDB_USERNAME"), "Influxdb username")
 	influxDBPassword = flag.String("influxdb-password", os.Getenv("INFLUXDB_PASSWORD"), "Influxdb user password")
 	influxDBDatabase = flag.String("influxdb-database", "metrics", "Influxdb database")
+	influxDBRP       = flag.String("influxdb-retention-policy", "default", "Influxdb retention policy")
 )
 
 // Sink write metrics to kafka topic
@@ -35,8 +36,9 @@ func (s *Sink) closeClient() error {
 
 func (s *Sink) kafkaMetrics(m []interface{}) error {
 	bp, err := influxdb.NewBatchPoints(influxdb.BatchPointsConfig{
-		Database:  *influxDBDatabase,
-		Precision: "s",
+		Database:        *influxDBDatabase,
+		Precision:       "s",
+		RetentionPolicy: *influxDBRP,
 	})
 	if err != nil {
 		return err
