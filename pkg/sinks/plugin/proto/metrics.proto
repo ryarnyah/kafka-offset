@@ -1,0 +1,36 @@
+syntax = "proto3";
+package proto;
+
+option go_package = ".;proto";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+message KafkaMeter {
+  string Name = 1;
+  google.protobuf.Timestamp Timestamp = 2;
+  map<string, string> Meta = 3;
+  double Rate1 = 4;
+  double Rate5 = 5;
+  double Rate15 = 6;
+  double RateMean = 7;
+  int64 Count = 8;
+}
+
+message KafkaGauge {
+  string Name = 1;
+  google.protobuf.Timestamp Timestamp = 2;
+  map<string, string> Meta = 3;
+  int64 Value = 4;
+}
+
+message WriteKafkaMetricsRequest {
+  repeated google.protobuf.Any metrics = 1;
+}
+
+message Empty {
+}
+
+service KafkaPlugin {
+  rpc WriteKafkaMetrics(WriteKafkaMetricsRequest) returns (Empty);
+} 
