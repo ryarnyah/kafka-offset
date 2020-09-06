@@ -21,10 +21,12 @@ var PluginMap = map[string]plugin.Plugin{
 	"kafka_grpc": &KafkaGRPCPlugin{},
 }
 
+// KafkaPlugin interface of sink plugin
 type KafkaPlugin interface {
 	WriteKafkaMetrics([]interface{}) error
 }
 
+// KafkaGRPCPlugin go-plugin struct to make of plugin
 type KafkaGRPCPlugin struct {
 	// GRPCPlugin must still implement the Plugin interface
 	plugin.Plugin
@@ -33,11 +35,13 @@ type KafkaGRPCPlugin struct {
 	Impl KafkaPlugin
 }
 
+// GRPCServer register kafka plugin over GRPC
 func (p *KafkaGRPCPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
 	proto.RegisterKafkaPluginService(s, proto.NewKafkaPluginService(&GRPCServer{Impl: p.Impl}))
 	return nil
 }
 
+// GRPCClient build GRPC client over go-plugin
 func (p *KafkaGRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return &GRPCClient{client: proto.NewKafkaPluginClient(c)}, nil
 }
