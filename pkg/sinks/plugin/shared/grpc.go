@@ -13,6 +13,7 @@ import (
 // GRPCClient is an implementation of KV that talks over RPC.
 type GRPCClient struct{ client proto.KafkaPluginClient }
 
+// WriteKafkaMetrics send to grpc server proto.KafkaGauge & proto.KafkaMeter
 func (plugin *GRPCClient) WriteKafkaMetrics(m []interface{}) error {
 	metricRequests := make([]*anypb.Any, 0)
 
@@ -61,12 +62,13 @@ func (plugin *GRPCClient) WriteKafkaMetrics(m []interface{}) error {
 	return err
 }
 
-// Here is the gRPC server that GRPCClient talks to.
+// GRPCServer gRPC server that GRPCClient talks to.
 type GRPCServer struct {
 	// This is the real implementation
 	Impl KafkaPlugin
 }
 
+// WriteKafkaMetrics send to plugin proto.KafkaGauge & proto.KafkaMeter
 func (s *GRPCServer) WriteKafkaMetrics(ctx context.Context, in *proto.WriteKafkaMetricsRequest) (*proto.Empty, error) {
 	metricRequests := make([]interface{}, 0)
 

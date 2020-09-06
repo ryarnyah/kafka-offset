@@ -36,7 +36,6 @@ docker run ryarnyah/kafka-offset-linux-amd64:0.8.0 <option>
 ## Usage
 
 ```bash
-
  _  __      __ _                ___   __  __          _
 | |/ /__ _ / _| | ____ _       / _ \ / _|/ _|___  ___| |_
 | ' // _` | |_| |/ / _` |_____| | | | |_| |_/ __|/ _ \ __|
@@ -45,7 +44,7 @@ docker run ryarnyah/kafka-offset-linux-amd64:0.8.0 <option>
 
  Scrape kafka metrics and send them to some sinks!
  Version: 0.8.0
- Build: 3eec8d5-dirty
+ Build: 7a702fe-dirty
 
   -collectd-hostname string
     	Hostname for collectd plugin
@@ -66,7 +65,7 @@ docker run ryarnyah/kafka-offset-linux-amd64:0.8.0 <option>
   -influxdb-password string
     	Influxdb user password
   -influxdb-retention-policy string
-    	Influxdb Retention Policy (default "1h")
+    	Influxdb retention policy (default "default")
   -influxdb-username string
     	Influxdb username
   -kafka-sink-brokers string
@@ -89,6 +88,18 @@ docker run ryarnyah/kafka-offset-linux-amd64:0.8.0 <option>
     	Kafka sink broker version (default "0.10.2.0")
   -log-level string
     	Log level (default "info")
+  -plugin-cmd string
+    	Command to launch the plugin with arguments (ex: /usr/local/bin/my-plugin --test)
+  -plugin-name string
+    	Plugin type to use. Only kafka_grpc is supported by now. (default "kafka_grpc")
+  -plugin-tls-ca-file string
+    	TLS CA file (client trust)
+  -plugin-tls-cert-file string
+    	TLS certificate file (client trust)
+  -plugin-tls-cert-key-file string
+    	TLS certificate key file (client trust)
+  -plugin-tls-insecure
+    	Check TLS certificate against CA File
   -profile string
     	Profile to apply to log (default "prod")
   -profiling-enable
@@ -96,7 +107,7 @@ docker run ryarnyah/kafka-offset-linux-amd64:0.8.0 <option>
   -profiling-host string
     	HTTP profiling host:port (default "localhost:6060")
   -sink string
-    	Sink to use (log, kafka, elasticsearch, collectd) (default "log")
+    	Sink to use (log, kafka, elasticsearch, collectd, plugin) (default "log")
   -sink-produce-interval duration
     	Time beetween metrics production (default 1m0s)
   -source-brokers string
@@ -186,4 +197,52 @@ InfluxDB sink export metrics to specified database (must exist) with default ret
 ##### Example
 ```bash
 docker run ryarnyah/kafka-offset-linux-amd64:0.8.0 -sink influxdb -source-brokers localhost:9092 -influxdb-addr http://localhost:8086
+```
+
+#### Plugin
+Plugin sink to implement your own go-plugin sink.
+##### Example (log sink implemented with plugin)
+```go
+package main
+
+import (
+        "github.com/hashicorp/go-plugin"
+        "github.com/ryarnyah/kafka-offset/pkg/sinks/plugin/shared"
+        "github.com/sirupsen/logrus"
+)
+
+type StdoutSink struct{}
+
+func (s StdoutSink) WriteKafkaMetrics(m []interface{}) error {
+	for _, metric := range m {
+		switch metric := metric.(type) {
+		case metrics.KafkaMeter:
+			s.kafkaMeter(metric)
+		case metrics.KafkaGauge:
+			s.kafkaGauge(metric)
+		}
+	}
+    return nil
+}
+
+func (StdoutSink) kafkaMeter(metric metrics.KafkaMeter) {
+	logrus.Infof("offsetMetrics %+v", metric)
+}
+func (StdoutSink) kafkaGauge(metric metrics.KafkaGauge) {
+	logrus.Infof("consumerGroupOffsetMetrics %+v", metric)
+}
+
+func main() {
+    plugin.Serve(&plugin.ServeConfig{
+            HandshakeConfig: shared.Handshake,
+            Plugins: map[string]plugin.Plugin{
+                    "kafka_grpc": &shared.KafkaGRPCPlugin{Impl: &StdoutSink{}},
+            },
+            GRPCServer: plugin.DefaultGRPCServer,
+    })
+}
+```
+To run it:
+```bash
+docker run ryarnyah/kafka-offset-linux-amd64:0.8.0 -sink plugin -source-brokers localhost:9092 -plugin-cmd "/plugins/my-plugin arg1 arg2"
 ```

@@ -1,65 +1,40 @@
 package plugin
 
 import (
-	"flag"
+	"crypto/tls"
 	"os/exec"
 	"strings"
 
 	"github.com/hashicorp/go-plugin"
-	"github.com/ryarnyah/kafka-offset/pkg/metrics"
-	"github.com/ryarnyah/kafka-offset/pkg/sinks/common"
 	"github.com/ryarnyah/kafka-offset/pkg/sinks/plugin/shared"
+	"github.com/ryarnyah/kafka-offset/pkg/util"
 )
 
-// Sink default sink use logrus to print metrics
-type Sink struct {
-	*common.Sink
-
-	plugin shared.KafkaPlugin
-}
-
-var (
-	pluginCmd  = flag.String("plugin-cmd", "", "Command to launch the plugin with arguments (ex: /usr/local/bin/my-plugin --test)")
-	pluginName = flag.String("plugin-name", "kafka_grpc", "Plugin type to use. Only kafka_grpc is supported by now.")
-)
-
-func init() {
-	metrics.RegisterSink("plugin", NewSink)
-}
-
-func (s *Sink) kafkaMetrics(m []interface{}) error {
-	return s.plugin.WriteKafkaMetrics(m)
-}
-
-// NewSink build sink
-func NewSink() (metrics.Sink, error) {
-	sink := &Sink{
-		Sink: common.NewCommonSink(),
-	}
-
-	cmd := strings.Split(*pluginCmd, " ")
-	client := plugin.NewClient(&plugin.ClientConfig{
+// NewPluginClient build new go-plugin client
+func NewPluginClient(pluginCmd, pluginName string, tlsConfig *tls.Config, tlsEnabled bool) (*plugin.Client, plugin.ClientProtocol, shared.KafkaPlugin, error) {
+	cmd := strings.Split(pluginCmd, " ")
+	clientConfig := &plugin.ClientConfig{
 		HandshakeConfig: shared.Handshake,
 		Plugins:         shared.PluginMap,
 		Cmd:             exec.Command(cmd[0], cmd[1:]...),
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolGRPC,
 		},
-	})
+		Logger: &util.HCLogAdapter{},
+	}
+	if tlsEnabled {
+		clientConfig.TLSConfig = tlsConfig
+	}
+	client := plugin.NewClient(clientConfig)
 	c, err := client.Client()
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
-	s, err := c.Dispense(*pluginName)
+	s, err := c.Dispense(pluginName)
 	if err != nil {
-		return nil, err
+		defer c.Close()
+		return nil, nil, nil, err
 	}
 
-	sink.plugin = s.(shared.KafkaPlugin)
-	sink.KafkaMetricsFunc = sink.kafkaMetrics
-	sink.CloseFunc = c.Close
-
-	sink.Run()
-
-	return sink, nil
+	return client, c, s.(shared.KafkaPlugin), nil
 }
