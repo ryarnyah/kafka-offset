@@ -144,8 +144,7 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 		topicPartitionsMetric := s.getOrRegister(fmt.Sprintf("kafka_topic_partition_%s", topic),
 			func() interface{} {
 				return NewKafkaGauge("kafka_topic_partition", topic, map[string]interface{}{
-					"topic":     topic,
-					"timestamp": start.Format(time.RFC3339),
+					"topic": topic,
 				})
 			}).(metrics.Gauge)
 		topicPartitionsMetric.Update(int64(len(partitions)))
@@ -170,7 +169,6 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 					return NewKafkaGauge("kafka_topic_partition_offset_newest", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 						"topic":     topic,
 						"partition": partition,
-						"timestamp": start.Format(time.RFC3339),
 					})
 				}).(metrics.Gauge)
 			offsetNewestMetric.Update(newestOffset)
@@ -179,7 +177,6 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 					return NewKafkaGauge("kafka_topic_partition_offset_oldest", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 						"topic":     topic,
 						"partition": partition,
-						"timestamp": start.Format(time.RFC3339),
 					})
 				}).(metrics.Gauge)
 			offsetOldestMetric.Update(oldestOffset)
@@ -200,7 +197,6 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 						return NewKafkaGauge("kafka_leader_topic_partition", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 							"topic":     topic,
 							"partition": partition,
-							"timestamp": start.Format(time.RFC3339),
 						})
 					}).(metrics.Gauge)
 				leaderTopicPartitionMetric.Update(int64(leader.ID()))
@@ -215,7 +211,6 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 					return NewKafkaGauge("kafka_replicas_topic_partition", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 						"topic":     topic,
 						"partition": partition,
-						"timestamp": start.Format(time.RFC3339),
 					})
 				}).(metrics.Gauge)
 			replicasTopicPartitionMetric.Update(int64(len(replicas)))
@@ -228,7 +223,6 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 					return NewKafkaGauge("kafka_in_sync_replicas", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 						"topic":     topic,
 						"partition": partition,
-						"timestamp": start.Format(time.RFC3339),
 					})
 				}).(metrics.Gauge)
 			inSyncReplicasMetric.Update(int64(len(inSyncReplicas)))
@@ -237,7 +231,6 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 					return NewKafkaGauge("kafka_leader_is_preferred_topic_partition", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 						"topic":     topic,
 						"partition": partition,
-						"timestamp": start.Format(time.RFC3339),
 					})
 				}).(metrics.Gauge)
 			if leader != nil && replicas != nil && len(replicas) > 0 && leader.ID() == replicas[0] {
@@ -250,7 +243,6 @@ func (s *KafkaSource) fetchLastOffsetsMetrics(start time.Time) (map[string]map[i
 					return NewKafkaGauge("kafka_under_replicated_topic_partition", fmt.Sprintf("%s-%d", topic, partition), map[string]interface{}{
 						"topic":     topic,
 						"partition": partition,
-						"timestamp": start.Format(time.RFC3339),
 					})
 				}).(metrics.Gauge)
 			if replicas != nil && inSyncReplicas != nil && len(inSyncReplicas) < len(replicas) {
@@ -352,7 +344,6 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 							"group":     group,
 							"topic":     topic,
 							"partition": partition,
-							"timestamp": start.Format(time.RFC3339),
 						})
 					}).(metrics.Gauge)
 				consumerGroupLag.Update(lastOffset - offset.Offset)
@@ -362,7 +353,6 @@ func (s *KafkaSource) fetchConsumerGroupMetrics(start time.Time, lastOffsets map
 							"group":     group,
 							"topic":     topic,
 							"partition": partition,
-							"timestamp": start.Format(time.RFC3339),
 						})
 					}).(metrics.Gauge)
 				consumerGroupLastOffset.Update(offset.Offset)
