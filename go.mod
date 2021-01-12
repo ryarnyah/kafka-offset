@@ -13,6 +13,6 @@ require (
 	github.com/olivere/elastic v6.2.35+incompatible
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0
 	github.com/sirupsen/logrus v1.7.0
-	google.golang.org/grpc v1.35.0-dev
+	google.golang.org/grpc v1.36.0-dev
 	google.golang.org/protobuf v1.25.0
 )
