@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/go-hclog v0.0.0-20181001195459-61d530d6c27f
 	github.com/hashicorp/go-plugin v0.0.0-20181030172320-54b6ff97d818
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
-	github.com/influxdata/influxdb v1.8.4
+	github.com/influxdata/influxdb v1.8.5
 	github.com/mailru/easyjson v0.0.0-20190403194419-1ea4449da983 // indirect
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/olivere/elastic v6.2.35+incompatible
