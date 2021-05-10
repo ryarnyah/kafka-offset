@@ -3,7 +3,7 @@ module github.com/ryarnyah/kafka-offset
 go 1.16
 
 require (
-	github.com/Shopify/sarama v1.28.0
+	github.com/Shopify/sarama v1.29.0
 	github.com/golang/protobuf v1.5.2
 	github.com/hashicorp/go-hclog v0.0.0-20181001195459-61d530d6c27f
 	github.com/hashicorp/go-plugin v0.0.0-20181030172320-54b6ff97d818
