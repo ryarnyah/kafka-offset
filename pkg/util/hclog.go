@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"io"
 	"log"
 	"strings"
 
@@ -107,6 +108,31 @@ func (*HCLogAdapter) SetLevel(level hclog.Level) {
 // StandardLogger Return a value that conforms to the stdlib log.Logger interface
 func (*HCLogAdapter) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger {
 	return log.New(&stdlogAdapter{}, "", 0)
+}
+
+func (*HCLogAdapter) ImpliedArgs() []interface{} {
+	return []interface{}{}
+}
+
+func (l *HCLogAdapter) Name() string { return "root" }
+
+func (l *HCLogAdapter) Log(level hclog.Level, msg string, args ...interface{}) {
+	switch level {
+	case hclog.Trace:
+		l.Trace(msg, args...)
+	case hclog.Debug:
+		l.Debug(msg, args...)
+	case hclog.Info:
+		l.Info(msg, args...)
+	case hclog.Warn:
+		l.Warn(msg, args...)
+	case hclog.Error:
+		l.Error(msg, args...)
+	}
+}
+
+func (l *HCLogAdapter) StandardWriter(opts *hclog.StandardLoggerOptions) io.Writer {
+	return logrus.StandardLogger().Out
 }
 
 // Provides a io.Writer to shim the data out of *log.Logger
