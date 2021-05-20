@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/Shopify/sarama v1.29.0
 	github.com/golang/protobuf v1.5.2
-	github.com/hashicorp/go-hclog v0.12.2
+	github.com/hashicorp/go-hclog v0.16.1
 	github.com/hashicorp/go-plugin v0.0.0-20181030172320-54b6ff97d818
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/influxdata/influxdb v1.9.0
