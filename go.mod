@@ -13,5 +13,5 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/sirupsen/logrus v1.8.1
 	google.golang.org/grpc v1.39.0-dev
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.27.1
 )
