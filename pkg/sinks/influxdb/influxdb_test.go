@@ -15,6 +15,10 @@ type fakeInfluxDBClient struct {
 	points []*influxdb.Point
 }
 
+func (fakeInfluxDBClient) WriteCtx(ctx context.Context, bp influxdb.BatchPoints) error {
+	return nil
+}
+
 func (fakeInfluxDBClient) Ping(timeout time.Duration) (time.Duration, string, error) {
 	return time.Second, "", nil
 }
