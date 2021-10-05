@@ -39,6 +39,11 @@ func (fakeInfluxDBClient) Close() error {
 func (s *fakeInfluxDBClient) CleanUp() {
 	s.points = nil
 }
+
+func (fakeInfluxDBClient) WriteCtx(ctx context.Context, bp influxdb.BatchPoints) error {
+	return nil
+}
+
 func TestSendToSink(t *testing.T) {
 	client := fakeInfluxDBClient{}
 	defer client.CleanUp()

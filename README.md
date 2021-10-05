@@ -1,4 +1,4 @@
-# Kafka-Offset [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fryarnyah%2Fkafka-offset.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fryarnyah%2Fkafka-offset?ref=badge_shield) [![Build Status](https://travis-ci.org/ryarnyah/kafka-offset.svg?branch=master)](https://travis-ci.org/ryarnyah/kafka-offset)
+# Kafka-Offset [![Build Status](https://travis-ci.org/ryarnyah/kafka-offset.svg?branch=master)](https://travis-ci.org/ryarnyah/kafka-offset)
 
 Kafka metrics offset fetcher with some sinks :D
 
