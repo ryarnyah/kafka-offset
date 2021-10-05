@@ -1,4 +1,4 @@
-# Kafka-Offset [![Build Status](https://travis-ci.org/ryarnyah/kafka-offset.svg?branch=master)](https://travis-ci.org/ryarnyah/kafka-offset)
+# Kafka-Offset [![Build Status](https://github.com/ryarnyah/kafka-offset/actions/workflows/build.yml/badge.svg)](https://github.com/ryarnyah/kafka-offset/)
 
 Kafka metrics offset fetcher with some sinks :D
 

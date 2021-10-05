@@ -24,3 +24,6 @@ jobs:
           files: "build/kafka-offset-*"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to docker hub
+        run: |
+          bash deploy/deploy.sh
