@@ -8,7 +8,7 @@ var registeredSinks = map[string](SinkFunc){}
 
 // Sink reprensent sink for kafka metrics
 type Sink interface {
-	GetMetricsChan() chan<- []interface{}
+	GetMetricsChan() chan<- []any
 	Close() error
 }
 

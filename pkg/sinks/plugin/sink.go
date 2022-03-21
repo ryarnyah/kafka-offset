@@ -33,7 +33,7 @@ func init() {
 	metrics.RegisterSink("plugin", NewSink)
 }
 
-func (s *Sink) kafkaMetrics(m []interface{}) error {
+func (s *Sink) kafkaMetrics(m []any) error {
 	return s.plugin.WriteKafkaMetrics(m)
 }
 
@@ -54,7 +54,7 @@ func NewSink() (metrics.Sink, error) {
 
 	// Go plugin healthcheck
 	var wg sync.WaitGroup
-	stopCh := make(chan interface{})
+	stopCh := make(chan any)
 
 	wg.Add(1)
 	go func() {

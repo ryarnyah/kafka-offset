@@ -9,23 +9,23 @@ import (
 )
 
 func TestSendToSink(t *testing.T) {
-	metricsResult := make([]interface{}, 0)
+	metricsResult := make([]any, 0)
 
 	sink := NewCommonSink()
-	sink.KafkaMetricsFunc = func(metric []interface{}) error {
+	sink.KafkaMetricsFunc = func(metric []any) error {
 		metricsResult = metric
 		return nil
 	}
 
 	sink.Run()
 
-	testMetrics := make([]interface{}, 0)
+	testMetrics := make([]any, 0)
 	testMetrics = append(testMetrics, metrics.KafkaMeter{
 		BaseMetric: metrics.BaseMetric{
 			Name:      "toto",
 			Key:       "titi",
 			Timestamp: time.Now(),
-			Meta:      make(map[string]interface{}),
+			Meta:      make(map[string]any),
 		},
 		Meter: go_metrics.NilMeter{},
 	})
@@ -34,7 +34,7 @@ func TestSendToSink(t *testing.T) {
 			Name:      "toto",
 			Key:       "titi",
 			Timestamp: time.Now(),
-			Meta:      make(map[string]interface{}),
+			Meta:      make(map[string]any),
 		},
 		Gauge: go_metrics.NilGauge{},
 	})

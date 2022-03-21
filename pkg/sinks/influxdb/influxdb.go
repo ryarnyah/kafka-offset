@@ -34,7 +34,7 @@ func (s *Sink) closeClient() error {
 	return s.client.Close()
 }
 
-func (s *Sink) kafkaMetrics(m []interface{}) error {
+func (s *Sink) kafkaMetrics(m []any) error {
 	bp, err := influxdb.NewBatchPoints(influxdb.BatchPointsConfig{
 		Database:        *influxDBDatabase,
 		Precision:       "s",
@@ -50,7 +50,7 @@ func (s *Sink) kafkaMetrics(m []interface{}) error {
 			for k, v := range metric.Meta {
 				tags[k] = fmt.Sprintf("%v", v)
 			}
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"count":     metric.Count(),
 				"rate1":     metric.Rate1(),
 				"rate5":     metric.Rate5(),
@@ -67,7 +67,7 @@ func (s *Sink) kafkaMetrics(m []interface{}) error {
 			for k, v := range metric.Meta {
 				tags[k] = fmt.Sprintf("%v", v)
 			}
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"value": metric.Value(),
 			}
 			pt, err := influxdb.NewPoint(metric.Name, tags, fields, metric.Timestamp)

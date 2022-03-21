@@ -30,7 +30,7 @@ var (
 	elasticsearchPassword = flag.String("elasticsearch-password", os.Getenv("SINK_ELASTICSEARCH_PASSWORD"), "Elasticsearch password")
 )
 
-func (s *Sink) sendMessages(m []interface{}) error {
+func (s *Sink) sendMessages(m []any) error {
 	bulkRequest := s.client.Bulk()
 
 	for _, msg := range m {
@@ -50,8 +50,8 @@ func (s *Sink) sendMessages(m []interface{}) error {
 	return nil
 }
 
-func (s *Sink) kafkaMetrics(m []interface{}) error {
-	metricsSnapshot := make([]interface{}, 0)
+func (s *Sink) kafkaMetrics(m []any) error {
+	metricsSnapshot := make([]any, 0)
 	for _, metric := range m {
 		switch metric := metric.(type) {
 		case metrics.KafkaMeter:
@@ -63,7 +63,7 @@ func (s *Sink) kafkaMetrics(m []interface{}) error {
 	return s.sendMessages(metricsSnapshot)
 }
 
-func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) interface{} {
+func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) any {
 	return meter{
 		Name:      metric.Name,
 		Timestamp: metric.Timestamp,
@@ -75,7 +75,7 @@ func (s *Sink) kafkaMeter(metric metrics.KafkaMeter) interface{} {
 		Count:     metric.Count(),
 	}
 }
-func (s *Sink) kafkaGauge(metric metrics.KafkaGauge) interface{} {
+func (s *Sink) kafkaGauge(metric metrics.KafkaGauge) any {
 	return gauge{
 		Name:      metric.Name,
 		Timestamp: metric.Timestamp,

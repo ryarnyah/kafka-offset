@@ -66,7 +66,7 @@ func RegisterKafkaPluginServer(s grpc.ServiceRegistrar, srv KafkaPluginServer) {
 	s.RegisterService(&KafkaPlugin_ServiceDesc, srv)
 }
 
-func _KafkaPlugin_WriteKafkaMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _KafkaPlugin_WriteKafkaMetrics_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(WriteKafkaMetricsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func _KafkaPlugin_WriteKafkaMetrics_Handler(srv interface{}, ctx context.Context
 		Server:     srv,
 		FullMethod: "/proto.KafkaPlugin/WriteKafkaMetrics",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(KafkaPluginServer).WriteKafkaMetrics(ctx, req.(*WriteKafkaMetricsRequest))
 	}
 	return interceptor(ctx, in, info, handler)

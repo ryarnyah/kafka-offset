@@ -8,8 +8,8 @@ import (
 
 // Sink default sink use logrus to print metrics
 type Sink struct {
-	MetricsChan      chan []interface{}
-	KafkaMetricsFunc func([]interface{}) error
+	MetricsChan      chan []any
+	KafkaMetricsFunc func([]any) error
 
 	CloseFunc func() error
 
@@ -17,7 +17,7 @@ type Sink struct {
 }
 
 // GetMetricsChan metrics chan
-func (s *Sink) GetMetricsChan() chan<- []interface{} {
+func (s *Sink) GetMetricsChan() chan<- []any {
 	return s.MetricsChan
 }
 
@@ -37,7 +37,7 @@ func (s *Sink) Close() error {
 // NewCommonSink build channels to be used by others sinks
 func NewCommonSink() *Sink {
 	s := &Sink{}
-	s.MetricsChan = make(chan []interface{}, 16)
+	s.MetricsChan = make(chan []any, 16)
 
 	return s
 }

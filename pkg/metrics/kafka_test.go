@@ -36,7 +36,7 @@ func TestFetchLastOffsetsMetrics(t *testing.T) {
 	previousConsumerGroupOffset := make(map[string]int64)
 
 	sink := fakeSink{
-		metrics: make([]interface{}, 0),
+		metrics: make([]any, 0),
 	}
 
 	source := &KafkaSource{
@@ -167,7 +167,7 @@ func TestFetchConsumerGroupMetrics(t *testing.T) {
 	previousConsumerGroupOffset := make(map[string]int64)
 
 	sink := fakeSink{
-		metrics: make([]interface{}, 0),
+		metrics: make([]any, 0),
 	}
 
 	source := &KafkaSource{
@@ -272,13 +272,13 @@ func TestFetchConsumerGroupMetrics(t *testing.T) {
 }
 
 type fakeSink struct {
-	metricsChan chan []interface{}
-	metrics     []interface{}
+	metricsChan chan []any
+	metrics     []any
 
 	sync.WaitGroup
 }
 
-func (s *fakeSink) GetMetricsChan() chan<- []interface{} {
+func (s *fakeSink) GetMetricsChan() chan<- []any {
 	return s.metricsChan
 }
 func (s *fakeSink) Close() error {

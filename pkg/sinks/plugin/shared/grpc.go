@@ -14,7 +14,7 @@ import (
 type GRPCClient struct{ client proto.KafkaPluginClient }
 
 // WriteKafkaMetrics send to grpc server proto.KafkaGauge & proto.KafkaMeter
-func (plugin *GRPCClient) WriteKafkaMetrics(m []interface{}) error {
+func (plugin *GRPCClient) WriteKafkaMetrics(m []any) error {
 	metricRequests := make([]*anypb.Any, 0)
 
 	for _, metric := range m {
@@ -72,7 +72,7 @@ type GRPCServer struct {
 
 // WriteKafkaMetrics send to plugin proto.KafkaGauge & proto.KafkaMeter
 func (s *GRPCServer) WriteKafkaMetrics(ctx context.Context, in *proto.WriteKafkaMetricsRequest) (*proto.Empty, error) {
-	metricRequests := make([]interface{}, 0)
+	metricRequests := make([]any, 0)
 
 	for _, anymetric := range in.Metrics {
 		metric, err := anymetric.UnmarshalNew()

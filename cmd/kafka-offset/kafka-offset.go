@@ -41,7 +41,7 @@ const (
 `
 )
 
-func installSignalHandler(stopChs ...chan interface{}) *sync.WaitGroup {
+func installSignalHandler(stopChs ...chan any) *sync.WaitGroup {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	var wg sync.WaitGroup
