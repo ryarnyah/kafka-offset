@@ -66,6 +66,8 @@ func (plugin *GRPCClient) WriteKafkaMetrics(m []interface{}) error {
 type GRPCServer struct {
 	// This is the real implementation
 	Impl KafkaPlugin
+
+	proto.UnimplementedKafkaPluginServer
 }
 
 // WriteKafkaMetrics send to plugin proto.KafkaGauge & proto.KafkaMeter

@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // KafkaPluginClient is the client API for KafkaPlugin service.
@@ -28,10 +29,6 @@ func NewKafkaPluginClient(cc grpc.ClientConnInterface) KafkaPluginClient {
 	return &kafkaPluginClient{cc}
 }
 
-var kafkaPluginWriteKafkaMetricsStreamDesc = &grpc.StreamDesc{
-	StreamName: "WriteKafkaMetrics",
-}
-
 func (c *kafkaPluginClient) WriteKafkaMetrics(ctx context.Context, in *WriteKafkaMetricsRequest, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
 	err := c.cc.Invoke(ctx, "/proto.KafkaPlugin/WriteKafkaMetrics", in, out, opts...)
@@ -41,72 +38,64 @@ func (c *kafkaPluginClient) WriteKafkaMetrics(ctx context.Context, in *WriteKafk
 	return out, nil
 }
 
-// KafkaPluginService is the service API for KafkaPlugin service.
-// Fields should be assigned to their respective handler implementations only before
-// RegisterKafkaPluginService is called.  Any unassigned fields will result in the
-// handler for that method returning an Unimplemented error.
-type KafkaPluginService struct {
-	WriteKafkaMetrics func(context.Context, *WriteKafkaMetricsRequest) (*Empty, error)
+// KafkaPluginServer is the server API for KafkaPlugin service.
+// All implementations must embed UnimplementedKafkaPluginServer
+// for forward compatibility
+type KafkaPluginServer interface {
+	WriteKafkaMetrics(context.Context, *WriteKafkaMetricsRequest) (*Empty, error)
+	mustEmbedUnimplementedKafkaPluginServer()
 }
 
-func (s *KafkaPluginService) writeKafkaMetrics(_ interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	if s.WriteKafkaMetrics == nil {
-		return nil, status.Errorf(codes.Unimplemented, "method WriteKafkaMetrics not implemented")
-	}
+// UnimplementedKafkaPluginServer must be embedded to have forward compatible implementations.
+type UnimplementedKafkaPluginServer struct {
+}
+
+func (UnimplementedKafkaPluginServer) WriteKafkaMetrics(context.Context, *WriteKafkaMetricsRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method WriteKafkaMetrics not implemented")
+}
+func (UnimplementedKafkaPluginServer) mustEmbedUnimplementedKafkaPluginServer() {}
+
+// UnsafeKafkaPluginServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to KafkaPluginServer will
+// result in compilation errors.
+type UnsafeKafkaPluginServer interface {
+	mustEmbedUnimplementedKafkaPluginServer()
+}
+
+func RegisterKafkaPluginServer(s grpc.ServiceRegistrar, srv KafkaPluginServer) {
+	s.RegisterService(&KafkaPlugin_ServiceDesc, srv)
+}
+
+func _KafkaPlugin_WriteKafkaMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(WriteKafkaMetricsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return s.WriteKafkaMetrics(ctx, in)
+		return srv.(KafkaPluginServer).WriteKafkaMetrics(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
-		Server:     s,
+		Server:     srv,
 		FullMethod: "/proto.KafkaPlugin/WriteKafkaMetrics",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return s.WriteKafkaMetrics(ctx, req.(*WriteKafkaMetricsRequest))
+		return srv.(KafkaPluginServer).WriteKafkaMetrics(ctx, req.(*WriteKafkaMetricsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// RegisterKafkaPluginService registers a service implementation with a gRPC server.
-func RegisterKafkaPluginService(s grpc.ServiceRegistrar, srv *KafkaPluginService) {
-	sd := grpc.ServiceDesc{
-		ServiceName: "proto.KafkaPlugin",
-		Methods: []grpc.MethodDesc{
-			{
-				MethodName: "WriteKafkaMetrics",
-				Handler:    srv.writeKafkaMetrics,
-			},
+// KafkaPlugin_ServiceDesc is the grpc.ServiceDesc for KafkaPlugin service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var KafkaPlugin_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "proto.KafkaPlugin",
+	HandlerType: (*KafkaPluginServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "WriteKafkaMetrics",
+			Handler:    _KafkaPlugin_WriteKafkaMetrics_Handler,
 		},
-		Streams:  []grpc.StreamDesc{},
-		Metadata: "pkg/sinks/plugin/proto/metrics.proto",
-	}
-
-	s.RegisterService(&sd, nil)
-}
-
-// NewKafkaPluginService creates a new KafkaPluginService containing the
-// implemented methods of the KafkaPlugin service in s.  Any unimplemented
-// methods will result in the gRPC server returning an UNIMPLEMENTED status to the client.
-// This includes situations where the method handler is misspelled or has the wrong
-// signature.  For this reason, this function should be used with great care and
-// is not recommended to be used by most users.
-func NewKafkaPluginService(s interface{}) *KafkaPluginService {
-	ns := &KafkaPluginService{}
-	if h, ok := s.(interface {
-		WriteKafkaMetrics(context.Context, *WriteKafkaMetricsRequest) (*Empty, error)
-	}); ok {
-		ns.WriteKafkaMetrics = h.WriteKafkaMetrics
-	}
-	return ns
-}
-
-// UnstableKafkaPluginService is the service API for KafkaPlugin service.
-// New methods may be added to this interface if they are added to the service
-// definition, which is not a backward-compatible change.  For this reason,
-// use of this type is not recommended.
-type UnstableKafkaPluginService interface {
-	WriteKafkaMetrics(context.Context, *WriteKafkaMetricsRequest) (*Empty, error)
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "pkg/sinks/plugin/proto/metrics.proto",
 }
