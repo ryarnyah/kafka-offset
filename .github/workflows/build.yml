@@ -18,7 +18,9 @@ jobs:
           go-version: '1.18'
       - name: Build
         run: |
+          sudo apt-get update && sudo apt-get install -y upx
           make dev-dependencies
           make
           make cover
           make release
+          find build -type f ! -name "*.md5" ! -name "*.sha256" -exec upx -9 {} \;
