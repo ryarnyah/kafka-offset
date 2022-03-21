@@ -7,7 +7,7 @@ import (
 
 type stdoutSink struct{}
 
-func (stdoutSink) WriteKafkaMetrics(m []interface{}) error {
+func (stdoutSink) WriteKafkaMetrics(m []any) error {
 	return nil
 }
 

@@ -11,7 +11,7 @@ import (
 
 func TestSendToSink(t *testing.T) {
 	client := testSink{
-		savedMetrics: make([]interface{}, 0),
+		savedMetrics: make([]any, 0),
 	}
 	sink := &Sink{
 		plugin: &client,
@@ -21,13 +21,13 @@ func TestSendToSink(t *testing.T) {
 
 	sink.Run()
 
-	testMetrics := make([]interface{}, 0)
+	testMetrics := make([]any, 0)
 	testMetrics = append(testMetrics, common_metrics.KafkaMeter{
 		BaseMetric: common_metrics.BaseMetric{
 			Name:      "toto",
 			Key:       "titi",
 			Timestamp: time.Now(),
-			Meta:      make(map[string]interface{}),
+			Meta:      make(map[string]any),
 		},
 		Meter: metrics.NilMeter{},
 	})
@@ -36,7 +36,7 @@ func TestSendToSink(t *testing.T) {
 			Name:      "toto",
 			Key:       "titi",
 			Timestamp: time.Now(),
-			Meta:      make(map[string]interface{}),
+			Meta:      make(map[string]any),
 		},
 		Gauge: metrics.NilGauge{},
 	})

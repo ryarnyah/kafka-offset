@@ -11,7 +11,7 @@ type BaseMetric struct {
 	Name      string
 	Key       string
 	Timestamp time.Time
-	Meta      map[string]interface{}
+	Meta      map[string]any
 }
 
 // KafkaMeter meter with metadata
@@ -34,7 +34,7 @@ func (m KafkaMeter) Snapshot() metrics.Meter {
 }
 
 // NewKafkaMeter build a new Kafka Meter
-func NewKafkaMeter(name, key string, meta map[string]interface{}) KafkaMeter {
+func NewKafkaMeter(name, key string, meta map[string]any) KafkaMeter {
 	return KafkaMeter{
 		BaseMetric: BaseMetric{
 			Name: name,
@@ -65,7 +65,7 @@ func (m KafkaGauge) Snapshot() metrics.Gauge {
 }
 
 // NewKafkaGauge build new kafka gauge
-func NewKafkaGauge(name, key string, meta map[string]interface{}) KafkaGauge {
+func NewKafkaGauge(name, key string, meta map[string]any) KafkaGauge {
 	return KafkaGauge{
 		BaseMetric: BaseMetric{
 			Name: name,

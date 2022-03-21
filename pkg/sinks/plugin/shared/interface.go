@@ -23,7 +23,7 @@ var PluginMap = map[string]plugin.Plugin{
 
 // KafkaPlugin interface of sink plugin
 type KafkaPlugin interface {
-	WriteKafkaMetrics([]interface{}) error
+	WriteKafkaMetrics([]any) error
 }
 
 // KafkaGRPCPlugin go-plugin struct to make of plugin
@@ -42,6 +42,6 @@ func (p *KafkaGRPCPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) 
 }
 
 // GRPCClient build GRPC client over go-plugin
-func (p *KafkaGRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (p *KafkaGRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
 	return &GRPCClient{client: proto.NewKafkaPluginClient(c)}, nil
 }

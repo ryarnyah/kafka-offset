@@ -18,27 +18,27 @@ type HCLogAdapter struct{}
 // vals can be any type, but display is implementation specific
 
 // Trace Emit a message and key/value pairs at the TRACE level
-func (*HCLogAdapter) Trace(msg string, args ...interface{}) {
+func (*HCLogAdapter) Trace(msg string, args ...any) {
 	logrus.Tracef(msg, args...)
 }
 
 // Debug Emit a message and key/value pairs at the DEBUG level
-func (*HCLogAdapter) Debug(msg string, args ...interface{}) {
+func (*HCLogAdapter) Debug(msg string, args ...any) {
 	logrus.Debugf(msg, args...)
 }
 
 // Info Emit a message and key/value pairs at the INFO level
-func (*HCLogAdapter) Info(msg string, args ...interface{}) {
+func (*HCLogAdapter) Info(msg string, args ...any) {
 	logrus.Infof(msg, args...)
 }
 
 // Warn Emit a message and key/value pairs at the WARN level
-func (*HCLogAdapter) Warn(msg string, args ...interface{}) {
+func (*HCLogAdapter) Warn(msg string, args ...any) {
 	logrus.Warnf(msg, args...)
 }
 
 // Error Emit a message and key/value pairs at the ERROR level
-func (*HCLogAdapter) Error(msg string, args ...interface{}) {
+func (*HCLogAdapter) Error(msg string, args ...any) {
 	logrus.Errorf(msg, args...)
 }
 
@@ -69,7 +69,7 @@ func (*HCLogAdapter) IsError() bool {
 }
 
 // With Creates a sublogger that will always have the given key/value pairs
-func (*HCLogAdapter) With(args ...interface{}) hclog.Logger {
+func (*HCLogAdapter) With(args ...any) hclog.Logger {
 	return &HCLogAdapter{}
 }
 
@@ -110,13 +110,13 @@ func (*HCLogAdapter) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logg
 	return log.New(&stdlogAdapter{}, "", 0)
 }
 
-func (*HCLogAdapter) ImpliedArgs() []interface{} {
-	return []interface{}{}
+func (*HCLogAdapter) ImpliedArgs() []any {
+	return []any{}
 }
 
 func (l *HCLogAdapter) Name() string { return "root" }
 
-func (l *HCLogAdapter) Log(level hclog.Level, msg string, args ...interface{}) {
+func (l *HCLogAdapter) Log(level hclog.Level, msg string, args ...any) {
 	switch level {
 	case hclog.Trace:
 		l.Trace(msg, args...)

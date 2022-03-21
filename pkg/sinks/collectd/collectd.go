@@ -23,7 +23,7 @@ type Sink struct {
 	*common.Sink
 }
 
-func (s *Sink) kafkaMetrics(m []interface{}) error {
+func (s *Sink) kafkaMetrics(m []any) error {
 	for _, metric := range m {
 		switch metric := metric.(type) {
 		case metrics.KafkaMeter:

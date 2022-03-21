@@ -29,13 +29,13 @@ func TestAddMetrics(t *testing.T) {
 	}
 	defer client.Kill()
 
-	testMetrics := make([]interface{}, 0)
+	testMetrics := make([]any, 0)
 	testMetrics = append(testMetrics, common_metrics.KafkaMeter{
 		BaseMetric: common_metrics.BaseMetric{
 			Name:      "toto",
 			Key:       "titi",
 			Timestamp: time.Now(),
-			Meta:      make(map[string]interface{}),
+			Meta:      make(map[string]any),
 		},
 		Meter: metrics.NilMeter{},
 	})
@@ -44,7 +44,7 @@ func TestAddMetrics(t *testing.T) {
 			Name:      "toto",
 			Key:       "titi",
 			Timestamp: time.Now(),
-			Meta:      make(map[string]interface{}),
+			Meta:      make(map[string]any),
 		},
 		Gauge: metrics.NilGauge{},
 	})
@@ -88,10 +88,10 @@ func TestHelperProcess(t *testing.T) {
 }
 
 type testSink struct {
-	savedMetrics []interface{}
+	savedMetrics []any
 }
 
-func (s *testSink) WriteKafkaMetrics(m []interface{}) error {
+func (s *testSink) WriteKafkaMetrics(m []any) error {
 	s.savedMetrics = append(s.savedMetrics, m...)
 	return nil
 }
