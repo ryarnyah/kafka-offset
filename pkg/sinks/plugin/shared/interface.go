@@ -37,7 +37,7 @@ type KafkaGRPCPlugin struct {
 
 // GRPCServer register kafka plugin over GRPC
 func (p *KafkaGRPCPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	proto.RegisterKafkaPluginService(s, proto.NewKafkaPluginService(&GRPCServer{Impl: p.Impl}))
+	proto.RegisterKafkaPluginServer(s, &GRPCServer{Impl: p.Impl})
 	return nil
 }
 
