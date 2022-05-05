@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Shopify/sarama v1.32.0
 	github.com/hashicorp/go-hclog v1.2.0
-	github.com/hashicorp/go-plugin v1.4.3
+	github.com/hashicorp/go-plugin v1.4.4
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 // indirect
 	github.com/influxdata/influxdb v1.9.6
 	github.com/olivere/elastic v6.2.37+incompatible
