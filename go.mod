@@ -10,7 +10,7 @@ require (
 	github.com/influxdata/influxdb v1.9.6
 	github.com/olivere/elastic v6.2.37+incompatible
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.0
 	google.golang.org/grpc v1.48.0
 	google.golang.org/protobuf v1.28.1
 )
