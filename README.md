@@ -6,11 +6,11 @@ Kafka metrics offset fetcher with some sinks :D
 
 #### Binaries
 
-- **linux** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.8.3/kafka-offset-linux-amd64) [arm64](https://github.com/ryarnyah/kafka-offset/releases/download/0.8.3/kafka-offset-linux-arm64)
-- **windows** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.8.3/kafka-offset-windows-amd64)
+- **linux** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.8.4/kafka-offset-linux-amd64) [arm64](https://github.com/ryarnyah/kafka-offset/releases/download/0.8.4/kafka-offset-linux-arm64)
+- **windows** [amd64](https://github.com/ryarnyah/kafka-offset/releases/download/0.8.4/kafka-offset-windows-amd64)
 
 ```bash
-sudo curl -L https://github.com/ryarnyah/kafka-offset/releases/download/0.8.3/kafka-offset-linux-amd64 -o /usr/local/bin/kafka-offset && sudo chmod +x /usr/local/bin/kafka-offset
+sudo curl -L https://github.com/ryarnyah/kafka-offset/releases/download/0.8.4/kafka-offset-linux-amd64 -o /usr/local/bin/kafka-offset && sudo chmod +x /usr/local/bin/kafka-offset
 ```
 
 #### Via Go
@@ -30,7 +30,7 @@ $ make
 
 #### Running with Docker
 ```bash
-docker run ryarnyah/kafka-offset-linux-amd64:0.8.3 <option>
+docker run ryarnyah/kafka-offset-linux-amd64:0.8.4 <option>
 ```
 
 ## Usage
@@ -43,7 +43,7 @@ docker run ryarnyah/kafka-offset-linux-amd64:0.8.3 <option>
 |_|\_\__,_|_| |_|\_\__,_|      \___/|_| |_| |___/\___|\__|
 
  Scrape kafka metrics and send them to some sinks!
- Version: 0.8.3
+ Version: 0.8.4
  Build: 7a702fe-dirty
 
   -collectd-hostname string
@@ -157,7 +157,7 @@ Simple log sink with glog
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset-linux-amd64:0.8.3 -sink log -source-brokers localhost:9092
+docker run ryarnyah/kafka-offset-linux-amd64:0.8.4 -sink log -source-brokers localhost:9092
 ```
 
 #### Kafka (-sink kafka)
@@ -165,7 +165,7 @@ Kafka sink export metrics as JSON format to specified topic. SASL/SSL supported.
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset-linux-amd64:0.8.3 -sink kafka -source-brokers localhost:9092 -kafka-sink-brokers localhost:9092 -kafka-sink-topic metrics
+docker run ryarnyah/kafka-offset-linux-amd64:0.8.4 -sink kafka -source-brokers localhost:9092 -kafka-sink-brokers localhost:9092 -kafka-sink-topic metrics
 ```
 
 #### Elasticsearch (-sink elasticsearch)
@@ -173,7 +173,7 @@ Elasticsearch V6 sink export metrics as documents to specified index. Auth suppo
 
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset-linux-amd64:0.8.3 -sink elasticsearch -source-brokers localhost:9092 -elasticsearch-sink-url localhost:9200 -elasticsearch-sink-index metrics
+docker run ryarnyah/kafka-offset-linux-amd64:0.8.4 -sink elasticsearch -source-brokers localhost:9092 -elasticsearch-sink-url localhost:9200 -elasticsearch-sink-index metrics
 ```
 
 #### Collectd (-sink collectd)
@@ -196,7 +196,7 @@ sudo curl -L https://raw.githubusercontent.com/ryarnyah/kafka-offset/master/depl
 InfluxDB sink export metrics to specified database (must exist) with default retention.
 ##### Example
 ```bash
-docker run ryarnyah/kafka-offset-linux-amd64:0.8.3 -sink influxdb -source-brokers localhost:9092 -influxdb-addr http://localhost:8086
+docker run ryarnyah/kafka-offset-linux-amd64:0.8.4 -sink influxdb -source-brokers localhost:9092 -influxdb-addr http://localhost:8086
 ```
 
 #### Plugin
@@ -244,5 +244,5 @@ func main() {
 ```
 To run it:
 ```bash
-docker run ryarnyah/kafka-offset-linux-amd64:0.8.3 -sink plugin -source-brokers localhost:9092 -plugin-cmd "/plugins/my-plugin arg1 arg2"
+docker run ryarnyah/kafka-offset-linux-amd64:0.8.4 -sink plugin -source-brokers localhost:9092 -plugin-cmd "/plugins/my-plugin arg1 arg2"
 ```
