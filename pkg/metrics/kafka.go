@@ -3,7 +3,6 @@ package metrics
 import (
 	"flag"
 	"fmt"
-	"math/rand"
 	"os"
 	"strings"
 	"sync"
@@ -44,10 +43,6 @@ var (
 	sourceScrapeInterval = flag.Duration("source-scrape-interval", 60*time.Second, "Time beetween scrape kafka metrics")
 	sinkProduceInterval  = flag.Duration("sink-produce-interval", 60*time.Second, "Time beetween metrics production")
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 // NewKafkaSource build new kafka source scraper
 func NewKafkaSource(sink Sink) (*KafkaSource, error) {

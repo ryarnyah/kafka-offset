@@ -105,6 +105,24 @@ func (*HCLogAdapter) SetLevel(level hclog.Level) {
 	}
 }
 
+// Returns the current level
+func (*HCLogAdapter) GetLevel() hclog.Level {
+	switch logrus.GetLevel() {
+	case logrus.TraceLevel:
+		return hclog.Trace
+	case logrus.DebugLevel:
+		return hclog.Debug
+	case logrus.WarnLevel:
+		return hclog.Warn
+	case logrus.ErrorLevel:
+		return hclog.Error
+	case logrus.InfoLevel:
+		fallthrough
+	default:
+		return hclog.Info
+	}
+}
+
 // StandardLogger Return a value that conforms to the stdlib log.Logger interface
 func (*HCLogAdapter) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger {
 	return log.New(&stdlogAdapter{}, "", 0)

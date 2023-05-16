@@ -3,7 +3,7 @@ package util
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"os"
 
 	"github.com/sirupsen/logrus"
 )
@@ -16,7 +16,7 @@ func GetTLSConfiguration(caFile string, certFile string, keyFile string, insecur
 	}
 	t := &tls.Config{}
 	if caFile != "" {
-		caCert, err := ioutil.ReadFile(caFile)
+		caCert, err := os.ReadFile(caFile)
 		if err != nil {
 			return nil, false, err
 		}

@@ -31,6 +31,35 @@ func (s *fakeKafkaProducer) SendMessages(m []*sarama.ProducerMessage) (err error
 func (s *fakeKafkaProducer) CleanUp() {
 	s.messages = nil
 }
+
+func (sp *fakeKafkaProducer) IsTransactional() bool {
+	return false
+}
+
+func (sp *fakeKafkaProducer) BeginTxn() error {
+	return nil
+}
+
+func (sp *fakeKafkaProducer) CommitTxn() error {
+	return nil
+}
+
+func (sp *fakeKafkaProducer) AbortTxn() error {
+	return nil
+}
+
+func (sp *fakeKafkaProducer) TxnStatus() sarama.ProducerTxnStatusFlag {
+	return sarama.ProducerTxnFlagReady
+}
+
+func (sp *fakeKafkaProducer) AddOffsetsToTxn(offsets map[string][]*sarama.PartitionOffsetMetadata, groupId string) error {
+	return nil
+}
+
+func (sp *fakeKafkaProducer) AddMessageToTxn(msg *sarama.ConsumerMessage, groupId string, metadata *string) error {
+	return nil
+}
+
 func TestSendToSink(t *testing.T) {
 	producer := fakeKafkaProducer{}
 	defer producer.CleanUp()
