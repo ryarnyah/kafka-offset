@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/Shopify/sarama v1.38.1
-	github.com/hashicorp/go-hclog v1.5.0
+	github.com/hashicorp/go-hclog v1.6.1
 	github.com/hashicorp/go-plugin v1.5.1
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/influxdata/influxdb v1.11.2
