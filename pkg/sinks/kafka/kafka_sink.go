@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/ryarnyah/kafka-offset/pkg/metrics"
 	"github.com/ryarnyah/kafka-offset/pkg/sinks/common"
 	"github.com/ryarnyah/kafka-offset/pkg/util"

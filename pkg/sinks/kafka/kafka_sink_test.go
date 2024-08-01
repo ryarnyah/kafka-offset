@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/rcrowley/go-metrics"
 
 	common_metrics "github.com/ryarnyah/kafka-offset/pkg/metrics"
