@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/ryarnyah/kafka-offset/pkg/util"
 	"github.com/sirupsen/logrus"
