@@ -1,19 +1,19 @@
 module github.com/ryarnyah/kafka-offset
 
-go 1.21
+go 1.23
 
-toolchain go1.22.5
+toolchain go1.23.1
 
 require (
-	github.com/IBM/sarama v1.43.2
+	github.com/IBM/sarama v1.43.3
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.1
 	github.com/hashicorp/yamux v0.1.1 // indirect
-	github.com/influxdata/influxdb v1.11.5
+	github.com/influxdata/influxdb v1.11.6
 	github.com/olivere/elastic v6.2.37+incompatible
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/sirupsen/logrus v1.9.3
-	google.golang.org/grpc v1.65.0
+	google.golang.org/grpc v1.67.0
 	google.golang.org/protobuf v1.34.2
 )
 
@@ -42,9 +42,9 @@ require (
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	golang.org/x/crypto v0.25.0 // indirect
-	golang.org/x/net v0.27.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240730163845-b1a4ccb954bf // indirect
+	golang.org/x/crypto v0.27.0 // indirect
+	golang.org/x/net v0.29.0 // indirect
+	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/text v0.18.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
 )
