@@ -46,16 +46,14 @@ func installSignalHandler(stopChs ...chan any) *sync.WaitGroup {
 	signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	var wg sync.WaitGroup
 
-	wg.Add(1)
 	// Block until a signal is received.
-	go func() {
+	wg.Go(func() {
 		sig := <-c
 		for _, stopCh := range stopChs {
 			close(stopCh)
 		}
 		logrus.Infof("Exiting given signal: %v", sig)
-		wg.Done()
-	}()
+	})
 	return &wg
 }
 

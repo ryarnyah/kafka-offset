@@ -56,9 +56,7 @@ func NewSink() (metrics.Sink, error) {
 	var wg sync.WaitGroup
 	stopCh := make(chan any)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		ticker := time.NewTicker(*pluginHealthCheckTimer)
 		defer ticker.Stop()
 		for {
@@ -85,7 +83,7 @@ func NewSink() (metrics.Sink, error) {
 				return
 			}
 		}
-	}()
+	})
 
 	sink.plugin = s
 	sink.KafkaMetricsFunc = sink.kafkaMetrics

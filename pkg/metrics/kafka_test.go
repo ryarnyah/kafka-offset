@@ -288,15 +288,13 @@ func (s *fakeSink) Close() error {
 	return nil
 }
 func (s *fakeSink) Run() {
-	s.Add(1)
-	go func() {
-		defer s.Done()
+	s.Go(func() {
 		for m := range s.metricsChan {
 			for metric := range m {
 				s.metrics = append(s.metrics, metric)
 			}
 		}
-	}()
+	})
 }
 
 func (s *fakeSink) CleanUp() {

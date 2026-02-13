@@ -4,7 +4,7 @@ import "time"
 
 type meter struct {
 	Name      string         `json:"name,omitempty"`
-	Timestamp time.Time      `json:"timestamp,omitempty"`
+	Timestamp time.Time      `json:"timestamp"`
 	Meta      map[string]any `json:"meta,omitempty"`
 	Rate1     float64        `json:"rate1,omitempty"`
 	Rate5     float64        `json:"rate5,omitempty"`
@@ -15,7 +15,7 @@ type meter struct {
 
 type gauge struct {
 	Name      string         `json:"name,omitempty"`
-	Timestamp time.Time      `json:"timestamp,omitempty"`
+	Timestamp time.Time      `json:"timestamp"`
 	Meta      map[string]any `json:"meta,omitempty"`
 	Value     int64          `json:"value,omitempty"`
 }

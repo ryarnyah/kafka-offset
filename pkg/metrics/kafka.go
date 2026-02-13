@@ -87,9 +87,7 @@ func NewKafkaSource(sink Sink) (*KafkaSource, error) {
 // Run launch scrape and return stopCh to end scraping
 func (s *KafkaSource) Run() chan any {
 	s.stopCh = make(chan any)
-	s.Add(1)
-	go func() {
-		defer s.Done()
+	s.Go(func() {
 		intervalTicker := time.NewTicker(*sourceScrapeInterval)
 		for {
 			select {
@@ -102,10 +100,8 @@ func (s *KafkaSource) Run() chan any {
 				return
 			}
 		}
-	}()
-	s.Add(1)
-	go func() {
-		defer s.Done()
+	})
+	s.Go(func() {
 		intervalTicker := time.NewTicker(*sinkProduceInterval)
 		for {
 			select {
@@ -118,7 +114,7 @@ func (s *KafkaSource) Run() chan any {
 				return
 			}
 		}
-	}()
+	})
 	return s.stopCh
 }
 
