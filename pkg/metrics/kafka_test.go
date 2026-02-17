@@ -23,6 +23,7 @@ func TestFetchLastOffsetsMetrics(t *testing.T) {
 	seedBroker.Returns(metadataResponse)
 
 	config := sarama.NewConfig()
+	config.ApiVersionsRequest = false
 	config.Metadata.Retry.Max = 0
 	config.Version = sarama.V0_9_0_0
 	c, err := sarama.NewClient([]string{seedBroker.Addr()}, config)
@@ -154,6 +155,7 @@ func TestFetchConsumerGroupMetrics(t *testing.T) {
 	seedBroker.Returns(metadataResponse)
 
 	config := sarama.NewConfig()
+	config.ApiVersionsRequest = false
 	config.Metadata.Retry.Max = 0
 	config.Version = sarama.V0_9_0_0
 	c, err := sarama.NewClient([]string{seedBroker.Addr()}, config)
