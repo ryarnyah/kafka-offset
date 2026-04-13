@@ -37,8 +37,8 @@ github.com/hashicorp/go-uuid v1.0.3 h1:2gKiV6YVmrJ1i2CKKa9obLvRieoRGviZFL26PcT/C
 github.com/hashicorp/go-uuid v1.0.3/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/yamux v0.1.2 h1:XtB8kyFOyHXYVFnwT5C3+Bdo8gArse7j2AQ0DA0Uey8=
 github.com/hashicorp/yamux v0.1.2/go.mod h1:C+zze2n6e/7wshOZep2A70/aQU6QBRWJO/G6FT1wIns=
-github.com/influxdata/influxdb v1.12.3 h1:nrqbOazMNQt969yQ7fXepY9hvy7xyg+efN1eb0bihfg=
-github.com/influxdata/influxdb v1.12.3/go.mod h1:czsGl4TCm2kWtzEHsGh74Nye77o/KgmKsLtF4/L9QVc=
+github.com/influxdata/influxdb v1.12.4 h1:vn/1rvFYkYpg9efRw79+PUPPnMX7HwyJV+hDIB9IrOQ=
+github.com/influxdata/influxdb v1.12.4/go.mod h1:czsGl4TCm2kWtzEHsGh74Nye77o/KgmKsLtF4/L9QVc=
 github.com/jcmturner/aescts/v2 v2.0.0 h1:9YKLH6ey7H4eDBXW8khjYslgyqG2xZikXP0EQFKrle8=
 github.com/jcmturner/aescts/v2 v2.0.0/go.mod h1:AiaICIRyfYg35RUkr8yESTqvSy7csK90qZ5xfvvsoNs=
 github.com/jcmturner/dnsutils/v2 v2.0.0 h1:lltnkeZGL0wILNvrNiVCR6Ro5PGU/SeBvVO/8c/iPbo=
