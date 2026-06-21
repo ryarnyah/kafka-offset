@@ -60,6 +60,14 @@ func (sp *fakeKafkaProducer) AddMessageToTxn(msg *sarama.ConsumerMessage, groupI
 	return nil
 }
 
+func (mp *fakeKafkaProducer) AddOffsetsToTxnWithGroupMetadata(offsets map[string][]*sarama.PartitionOffsetMetadata, groupMetadata *sarama.ConsumerGroupMetadata) error {
+	return nil
+}
+
+func (sp *fakeKafkaProducer) AddMessageToTxnWithGroupMetadata(msg *sarama.ConsumerMessage, groupMetadata *sarama.ConsumerGroupMetadata, metadata *string) error {
+	return nil
+}
+
 func TestSendToSink(t *testing.T) {
 	producer := fakeKafkaProducer{}
 	defer producer.CleanUp()
